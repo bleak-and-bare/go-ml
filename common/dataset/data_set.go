@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/rand"
 	"os"
 	"slices"
 	"strconv"
@@ -125,6 +126,7 @@ func (ds *DataSet[T]) Extract(min_range float32, max_range float32) (*DataSet[T]
 	return &new_ds, nil
 }
 
+// returns real samples count
 func (ds *DataSet[T]) raw_count() uint32 {
 	return uint32(len(ds.datas))
 }
@@ -261,4 +263,17 @@ func (ds *DataSet[T]) ForEachSample(cb func(DataSample[T]) bool) bool {
 		}
 	}
 	return true
+}
+
+func (ds *DataSet[T]) Shuffle() *DataSet[T] {
+	start := ds.min_bound()
+	real_size := int(ds.raw_count())
+
+	rand.Shuffle(int(ds.Size()), func(i, j int) {
+		if start+i < real_size && start+j < real_size {
+			ds.datas[start+i], ds.datas[start+j] = ds.datas[start+j], ds.datas[start+i]
+		}
+	})
+
+	return ds
 }

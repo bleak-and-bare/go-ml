@@ -23,7 +23,21 @@ func (s *DataSample[T]) DotProduct(v []T) (T, error) {
 	return sum, nil
 }
 
-func (s *DataSample[T]) GetSampleTest(placeholder T) []T {
+func (s *DataSample[T]) GetSampleTest() ([]T, error) {
+	sample := make([]T, s.owner.FeatCount())
+	for i := range sample {
+		feat := s.owner.GetFeat(s.row, i)
+		if feat == nil {
+			return nil, fmt.Errorf("DataSample.GetSampleTest : failed to get feature <%d, %d>", s.row, i)
+		}
+		sample[i] = *feat
+	}
+
+	return sample, nil
+}
+
+// placeholder : default value for empty cells
+func (s *DataSample[T]) GetSampleTestNoErr(placeholder T) []T {
 	sample := make([]T, s.owner.FeatCount())
 	for i := range sample {
 		sample[i] = *s.owner.GetFeat(s.row, i)

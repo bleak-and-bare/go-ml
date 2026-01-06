@@ -15,29 +15,15 @@ func main() {
 		return
 	}
 
-	ds.DropColumnAt(0).Head(5)
+	ds.DropColumnAt(0) // .Head(5)
 	train, _ := ds.Extract(0.0, 0.8)
 	test, _ := ds.Extract(0.8, 1.0)
 
 	m := regression.NewLinearReg[float32]()
 	m.Fit(train)
-	m.PrintRegLineEq()
+	m.PrintRegLineEquation()
 
-	var caught_err error
-	fmt.Printf("predicted\texpected\n")
-
-	if !test.ForEachSample(func(ds dataset.DataSample[float32]) bool {
-		test := ds.GetSampleTest(0.0)
-		y, err := m.Predict(test)
-		if err != nil {
-			caught_err = err
-			return false
-		}
-
-		fmt.Printf("%.3f\t%.3f\n", y, *ds.GetTarget())
-
-		return true
-	}) {
-		fmt.Fprintf(os.Stderr, "Failed to predict on test sample : %v", caught_err)
-	}
+	report := m.PredictOn(test)
+	fmt.Printf("Skipped rows : %d\n", report.SkippedRows)
+	fmt.Printf("Error : %.4f", report.Error)
 }
