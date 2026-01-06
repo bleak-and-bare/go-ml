@@ -7,8 +7,10 @@ type float interface {
 }
 
 type RegressionReport[T float] struct {
-	DataSet     *dataset.DataSet[T]
-	Predictions []T
-	SkippedRows int
-	Error       float64
+	DataSet           *dataset.DataSet[T]
+	Predictions       []T
+	SkippedRows       int
+	RootMeanSquareErr float64
+	MeanAbsoluteErr   float64
+	Score             float64
 }

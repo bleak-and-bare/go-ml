@@ -254,7 +254,8 @@ func (m *LinearRegression[T]) PredictOn(ds *dataset.DataSet[T]) regression.Regre
 		if y := ds.GetTarget(); y != nil {
 			diff := *y - pred
 			r.Predictions = append(r.Predictions, pred)
-			r.Error += float64(diff * diff)
+			r.MeanAbsoluteErr += math.Abs(float64(diff))
+			r.RootMeanSquareErr += float64(diff * diff)
 		} else {
 			r.SkippedRows++
 		}
@@ -264,8 +265,10 @@ func (m *LinearRegression[T]) PredictOn(ds *dataset.DataSet[T]) regression.Regre
 
 	count := ds.Size() - uint32(r.SkippedRows)
 	if count > 0 {
-		r.Error = math.Sqrt(r.Error)
-		r.Error /= float64(count)
+		var_estimator := r.RootMeanSquareErr / float64(count)
+		r.Score = 1 - var_estimator/ds.TargetVariance()
+		r.RootMeanSquareErr = math.Sqrt(r.RootMeanSquareErr) / float64(count)
+		r.MeanAbsoluteErr /= float64(count)
 	}
 
 	return r

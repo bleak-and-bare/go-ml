@@ -25,5 +25,7 @@ func main() {
 
 	report := m.PredictOn(test)
 	fmt.Printf("Skipped rows : %d\n", report.SkippedRows)
-	fmt.Printf("Error : %.4f", report.Error)
+	fmt.Printf("RMSE : %.4f\n", report.RootMeanSquareErr)
+	fmt.Printf("MAE : %.4f\n", report.MeanAbsoluteErr)
+	fmt.Printf("Score : %.4f\n", report.Score)
 }

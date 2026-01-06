@@ -265,6 +265,27 @@ func (ds *DataSet[T]) ForEachSample(cb func(DataSample[T]) bool) bool {
 	return true
 }
 
+func (ds *DataSet[T]) TargetVariance() float64 {
+	n := ds.max_bound()
+	sum := 0.0
+
+	for i := range n {
+		for j := i + 1; j < n; j++ {
+			y_i := ds.datas[i][ds.trg_col_idx]
+			y_j := ds.datas[j][ds.trg_col_idx]
+
+			if y_i == nil || y_j == nil {
+				continue
+			}
+
+			diff := *y_i - *y_j
+			sum += float64(diff * diff)
+		}
+	}
+
+	return sum / float64(n*n)
+}
+
 func (ds *DataSet[T]) Shuffle() *DataSet[T] {
 	start := ds.min_bound()
 	real_size := int(ds.raw_count())
