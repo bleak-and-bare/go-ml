@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"golang.org/x/exp/constraints"
 )
 
 type header_t struct {
@@ -18,11 +20,7 @@ type header_t struct {
 	used bool
 }
 
-type float interface {
-	~float32 | ~float64
-}
-
-type DataSet[T float] struct {
+type DataSet[T constraints.Float] struct {
 	min_range         float32
 	max_range         float32
 	headers           []header_t
@@ -31,7 +29,7 @@ type DataSet[T float] struct {
 	datas             [][](*T)
 }
 
-func NewDataSet[T float](trg_col_idx uint32) DataSet[T] {
+func NewDataSet[T constraints.Float](trg_col_idx uint32) DataSet[T] {
 	var ds DataSet[T]
 	ds.trg_col_idx = trg_col_idx
 	ds.min_range = 0.0
@@ -64,7 +62,10 @@ func (ds *DataSet[T]) FillEmpties(placeholder T) {
 }
 
 func (ds *DataSet[T]) FeatCount() int {
-	return slices.Index(ds.real_feat_indices, -1)
+	if end := slices.Index(ds.real_feat_indices, -1); end != -1 {
+		return end
+	}
+	return len(ds.real_feat_indices)
 }
 
 func (ds *DataSet[T]) GetFeat(row int, feat int) *T {

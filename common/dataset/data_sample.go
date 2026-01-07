@@ -2,9 +2,11 @@ package dataset
 
 import (
 	"fmt"
+
+	"golang.org/x/exp/constraints"
 )
 
-type DataSample[T float] struct {
+type DataSample[T constraints.Float] struct {
 	owner *DataSet[T]
 	row   int
 	// curr_feat int

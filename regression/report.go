@@ -1,12 +1,11 @@
 package regression
 
-import "github.com/bleak-and-bare/machine_learning/common/dataset"
+import (
+	"github.com/bleak-and-bare/machine_learning/common/dataset"
+	"golang.org/x/exp/constraints"
+)
 
-type float interface {
-	~float32 | ~float64
-}
-
-type RegressionReport[T float] struct {
+type RegressionReport[T constraints.Float] struct {
 	DataSet           *dataset.DataSet[T]
 	Predictions       []T
 	SkippedRows       int
