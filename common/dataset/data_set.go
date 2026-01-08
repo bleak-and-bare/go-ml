@@ -26,7 +26,7 @@ type DataSet[T constraints.Float] struct {
 	headers           []header_t
 	real_feat_indices []int
 	trg_col_idx       uint32
-	datas             [][](*T)
+	datas             [](*T) // row major
 }
 
 func NewDataSet[T constraints.Float](trg_col_idx uint32) DataSet[T] {
@@ -35,6 +35,10 @@ func NewDataSet[T constraints.Float](trg_col_idx uint32) DataSet[T] {
 	ds.min_range = 0.0
 	ds.max_range = 1.0
 	return ds
+}
+
+func (ds *DataSet[T]) at(i, j int) *T {
+	return ds.datas[i*len(ds.headers)+j]
 }
 
 func (ds *DataSet[T]) update_feat_indices() {
@@ -51,12 +55,26 @@ func (ds *DataSet[T]) update_feat_indices() {
 	}
 }
 
+func (ds *DataSet[T]) SetTargetCol(i int) error {
+	if i == int(ds.trg_col_idx) {
+		return nil
+	}
+
+	if i < 0 || i >= len(ds.headers) {
+		return fmt.Errorf("Invalid column index : %d", i)
+	}
+
+	if !ds.headers[i].used {
+		return errors.New("Can not set unused column as target")
+	}
+
+	return nil
+}
+
 func (ds *DataSet[T]) FillEmpties(placeholder T) {
-	for _, row := range ds.datas {
-		for j := range row {
-			if row[j] == nil {
-				row[j] = &placeholder
-			}
+	for i := range ds.datas {
+		if ds.datas[i] == nil {
+			ds.datas[i] = &placeholder
 		}
 	}
 }
@@ -78,7 +96,7 @@ func (ds *DataSet[T]) GetFeat(row int, feat int) *T {
 		return nil
 	}
 
-	return ds.datas[row][idx]
+	return ds.at(row, idx)
 }
 
 func (ds *DataSet[T]) DropColumnAt(idx uint8) *DataSet[T] {
@@ -106,14 +124,6 @@ func (ds *DataSet[T]) GetColumnNames() []string {
 	return cols
 }
 
-func (ds *DataSet[T]) GetSample(i int) []*T {
-	if i >= len(ds.datas) {
-		return nil
-	}
-
-	return ds.datas[i]
-}
-
 func (ds *DataSet[T]) Extract(min_range float32, max_range float32) (*DataSet[T], error) {
 	if min_range > max_range {
 		return nil, errors.New("DataSet.Extract : invalid range provided")
@@ -129,7 +139,7 @@ func (ds *DataSet[T]) Extract(min_range float32, max_range float32) (*DataSet[T]
 
 // returns real samples count
 func (ds *DataSet[T]) raw_count() uint32 {
-	return uint32(len(ds.datas))
+	return uint32(len(ds.datas) / len(ds.headers))
 }
 
 func (ds *DataSet[T]) min_bound() int {
@@ -169,9 +179,8 @@ func (ds *DataSet[T]) Head(max uint8) {
 
 	max_bound := ds.max_bound()
 	for i := ds.min_bound(); i < max_bound && max > 0; i, max = i+1, max-1 {
-		row := ds.datas[i]
-
-		for j, col := range row {
+		for j := range ds.headers {
+			col := ds.at(i, j)
 			if j >= len(ds.headers) || !ds.headers[j].used {
 				continue
 			}
@@ -210,8 +219,7 @@ func (ds *DataSet[T]) LoadCsvReader(input_reader io.Reader, delim rune) error {
 				ds.headers = append(ds.headers, header_t{col, true})
 			}
 		} else if len(cols) > 0 {
-			ds.datas = append(ds.datas, make([]*T, 0, len(ds.headers)))
-			row := ds.datas[len(ds.datas)-1]
+			ds.datas = slices.Grow(ds.datas, len(ds.headers))
 
 			for i, col := range cols {
 				if i >= len(ds.headers) { // make sure every row has the same length as header
@@ -220,20 +228,18 @@ func (ds *DataSet[T]) LoadCsvReader(input_reader io.Reader, delim rune) error {
 
 				if c, err := strconv.ParseFloat(col, 64); err == nil {
 					concrete := T(c)
-					row = append(row, &concrete)
+					ds.datas = append(ds.datas, &concrete)
 				} else {
-					row = append(row, nil)
+					ds.datas = append(ds.datas, nil)
 				}
 			}
 
 			r := len(ds.headers) - len(cols)
 			if r > 0 {
 				for ; r > 0; r-- {
-					row = append(row, nil)
+					ds.datas = append(ds.datas, nil)
 				}
 			}
-
-			ds.datas[len(ds.datas)-1] = row
 		}
 	}
 
@@ -272,8 +278,8 @@ func (ds *DataSet[T]) TargetVariance() float64 {
 
 	for i := range n {
 		for j := i + 1; j < n; j++ {
-			y_i := ds.datas[i][ds.trg_col_idx]
-			y_j := ds.datas[j][ds.trg_col_idx]
+			y_i := ds.at(i, int(ds.trg_col_idx))
+			y_j := ds.at(j, int(ds.trg_col_idx))
 
 			if y_i == nil || y_j == nil {
 				continue
@@ -289,11 +295,14 @@ func (ds *DataSet[T]) TargetVariance() float64 {
 
 func (ds *DataSet[T]) Shuffle() *DataSet[T] {
 	start := ds.min_bound()
+	cols := len(ds.headers)
 	real_size := int(ds.raw_count())
 
 	rand.Shuffle(int(ds.Size()), func(i, j int) {
 		if start+i < real_size && start+j < real_size {
-			ds.datas[start+i], ds.datas[start+j] = ds.datas[start+j], ds.datas[start+i]
+			for k := range cols {
+				ds.datas[i*cols+k], ds.datas[j*cols+k] = ds.datas[j*cols+k], ds.datas[i*cols+k]
+			}
 		}
 	})
 

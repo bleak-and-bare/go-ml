@@ -42,7 +42,12 @@ func (s *DataSample[T]) GetSampleTest() ([]T, error) {
 func (s *DataSample[T]) GetSampleTestNoErr(placeholder T) []T {
 	sample := make([]T, s.owner.FeatCount())
 	for i := range sample {
-		sample[i] = *s.owner.GetFeat(s.row, i)
+		feat := s.owner.GetFeat(s.row, i)
+		if feat == nil {
+			sample[i] = placeholder
+		} else {
+			sample[i] = *feat
+		}
 	}
 
 	return sample
@@ -57,5 +62,5 @@ func (s *DataSample[T]) GetRow() int {
 }
 
 func (s *DataSample[T]) GetTarget() *T {
-	return s.owner.datas[s.row][s.owner.trg_col_idx]
+	return s.owner.at(s.row, int(s.owner.trg_col_idx))
 }

@@ -65,7 +65,7 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 			for batch_i := float32(0.0); batch_i < 1.0; batch_i += step {
 				batch, err := ds.Extract(batch_i, batch_i+step)
 				if err != nil {
-					return nil
+					return err
 				}
 				batches = append(batches, batch)
 			}
