@@ -1,6 +1,7 @@
 package optimization
 
 import (
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"slices"
@@ -28,70 +29,15 @@ type SGD[T constraints.Float] struct {
 // Initialize SGD with MSE as cost function
 func NewSGD[T constraints.Float]() GradientDescent[T] {
 	return GradientDescent[T]{
-		theta:           nil,
-		BatchSize:       128,
-		Alpha:           1e-3,
-		MaxEpochs:       10_1000,
-		CostPartialDiff: mse_partial_diff[T],
+		theta:     nil,
+		BatchSize: 128,
+		Alpha:     1e-3,
+		MaxEpochs: 10_1000,
 	}
 }
 
 func (g *GradientDescent[T]) GetParams() []T {
 	return g.theta
-}
-
-func hypo[T constraints.Float](thetas []T, ds *dataset.DataSample[T]) (T, error) {
-	d, err := ds.DotProduct(thetas[1:])
-	if err != nil {
-		return 0.0, err
-	}
-
-	return thetas[0] + d, nil
-}
-
-func mse_partial_diff[T constraints.Float](j int, params []T, ds *dataset.DataSet[T]) (T, error) {
-	sample_size := ds.Size()
-
-	var sum T
-	var caught_err error
-
-	if j == 0 { // computing bias
-		if !ds.ForEachSample(func(ds dataset.DataSample[T]) bool {
-			y := ds.GetTarget()
-			if y != nil {
-				h, err := hypo(params, &ds)
-				if err != nil {
-					caught_err = err
-					return false
-				}
-				sum += h - *y
-				return true
-			}
-			return false
-		}) {
-			return 0.0, caught_err
-		}
-	} else {
-		if !ds.ForEachSample(func(ds dataset.DataSample[T]) bool {
-			y := ds.GetTarget()
-			x := ds.GetFeat(j - 1)
-
-			if y != nil && x != nil {
-				h, err := hypo(params, &ds)
-				if err != nil {
-					caught_err = err
-					return false
-				}
-				sum += *x * (h - *y)
-			}
-
-			return true
-		}) {
-			return 0.0, caught_err
-		}
-	}
-
-	return T(2/float32(sample_size)) * sum, nil
 }
 
 func (g *GradientDescent[T]) initialize_parameters(feat_count int) {
@@ -103,6 +49,10 @@ func (g *GradientDescent[T]) initialize_parameters(feat_count int) {
 }
 
 func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
+	if g.CostPartialDiff == nil {
+		return errors.New("No partial derivative function supplied")
+	}
+
 	sample_size := int(ds.Size())
 	n_theta := slices.Clone(g.theta)
 

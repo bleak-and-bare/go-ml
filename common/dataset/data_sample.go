@@ -52,6 +52,10 @@ func (s *DataSample[T]) GetFeat(i int) *T {
 	return s.owner.GetFeat(s.row, i)
 }
 
+func (s *DataSample[T]) GetRow() int {
+	return s.row
+}
+
 func (s *DataSample[T]) GetTarget() *T {
 	return s.owner.datas[s.row][s.owner.trg_col_idx]
 }
