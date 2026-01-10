@@ -26,7 +26,7 @@ type DataSet[T constraints.Float] struct {
 	headers           []header_t
 	real_feat_indices []int
 	trg_col_idx       uint32
-	datas             [](*T) // row major
+	datas             []DataCell // row major
 }
 
 func NewDataSet[T constraints.Float](trg_col_idx uint32) DataSet[T] {
@@ -37,7 +37,32 @@ func NewDataSet[T constraints.Float](trg_col_idx uint32) DataSet[T] {
 	return ds
 }
 
-func (ds *DataSet[T]) at(i, j int) *T {
+func (ds *DataSet[T]) Copy() DataSet[T] {
+	copy := *ds
+	copy.headers = slices.Clone(ds.headers)
+	copy.real_feat_indices = slices.Clone(ds.real_feat_indices)
+	copy.datas = slices.Clone(ds.datas)
+	return copy
+}
+
+func (ds *DataSet[T]) MapColumn(i int, cb func(DataCell) T) *DataSet[T] {
+	if i < 0 || i >= len(ds.headers) {
+		return ds
+	}
+
+	start, end := ds.min_bound(), ds.max_bound()
+	for row := start; row < end; row++ {
+		ds.set_at(row, i, cb(ds.at(row, i)))
+	}
+
+	return ds
+}
+
+func (ds *DataSet[T]) set_at(i, j int, v T) {
+	ds.datas[i*len(ds.headers)+j] = &RealDataCell[T]{v}
+}
+
+func (ds *DataSet[T]) at(i, j int) DataCell {
 	return ds.datas[i*len(ds.headers)+j]
 }
 
@@ -74,7 +99,7 @@ func (ds *DataSet[T]) SetTargetCol(i int) error {
 func (ds *DataSet[T]) FillEmpties(placeholder T) {
 	for i := range ds.datas {
 		if ds.datas[i] == nil {
-			ds.datas[i] = &placeholder
+			ds.datas[i] = &RealDataCell[T]{placeholder}
 		}
 	}
 }
@@ -96,7 +121,12 @@ func (ds *DataSet[T]) GetFeat(row int, feat int) *T {
 		return nil
 	}
 
-	return ds.at(row, idx)
+	cell := ds.at(row, idx)
+	if c, ok := cell.(*RealDataCell[T]); ok {
+		return &c.Value
+	}
+
+	return nil
 }
 
 func (ds *DataSet[T]) DropColumnAt(idx uint8) *DataSet[T] {
@@ -161,42 +191,87 @@ func (ds *DataSet[T]) Empty() bool {
 	return ds.Size() == 0
 }
 
-func (ds *DataSet[T]) Head(max uint8) {
-	if ds.datas == nil {
+func (ds *DataSet[T]) Head(max uint32) {
+	if ds.datas == nil || max == 0 {
 		return
 	}
 
-	var line_sep strings.Builder
-	for _, h := range ds.headers {
+	const tab = "  "
+	max_bound := ds.max_bound()
+	visited := make([]bool, len(ds.headers))
+	max_lengths := make([]int, len(ds.headers))
+
+	for i, h := range ds.headers {
 		if !h.used {
 			continue
 		}
 
-		line_sep.WriteString(strings.Repeat("-", len(h.name)+8))
-		fmt.Printf("%v\t\t", h.name)
+		if !visited[i] {
+			visited[i] = true
+			max_lengths[i] = len(h.name)
+		} else if max_lengths[i] < len(h.name) {
+			max_lengths[i] = len(h.name)
+		}
+	}
+
+	for i := ds.min_bound(); i < max_bound; i++ {
+		for j := range ds.headers {
+			if !ds.headers[j].used {
+				continue
+			}
+
+			col := ds.at(i, j)
+			switch c := col.(type) {
+			case *RealDataCell[T]:
+				s := fmt.Sprintf("%.3f", c.Value)
+				l := len(s)
+				if l > max_lengths[j] {
+					max_lengths[j] = l
+				}
+			case *StrDataCell:
+				l := len(c.Value)
+				if l > max_lengths[j] {
+					max_lengths[j] = l
+				}
+			}
+		}
+	}
+
+	var line_sep strings.Builder
+	for i, h := range ds.headers {
+		if !h.used {
+			continue
+		}
+
+		line_sep.WriteString(strings.Repeat("-", max_lengths[i]+len(tab)+1))
+		fmt.Printf("%v%v%v|", h.name, strings.Repeat(" ", max_lengths[i]-len(h.name)), tab)
 	}
 	fmt.Printf("\n%v\n", line_sep.String())
 
-	max_bound := ds.max_bound()
 	for i := ds.min_bound(); i < max_bound && max > 0; i, max = i+1, max-1 {
 		for j := range ds.headers {
-			col := ds.at(i, j)
 			if j >= len(ds.headers) || !ds.headers[j].used {
 				continue
 			}
 
-			if col != nil {
-				fmt.Printf("%.3f\t\t", *col)
-			} else {
-				fmt.Printf("\t\t\t\t")
+			col := ds.at(i, j)
+			str := ""
+
+			switch c := col.(type) {
+			case *RealDataCell[T]:
+				str = fmt.Sprintf("%.3f", c.Value)
+			case *StrDataCell:
+				str = c.Value
 			}
+
+			fmt.Printf("%v%v%v|", str, strings.Repeat(" ", max_lengths[j]-len(str)), tab)
 		}
 		fmt.Println("")
 	}
 }
 
 func (ds *DataSet[T]) Dump() {
-	ds.Head(uint8(ds.raw_count()))
+	ds.Head(ds.raw_count())
 }
 
 func (ds *DataSet[T]) LoadCsvReader(input_reader io.Reader, delim rune) error {
@@ -228,9 +303,9 @@ func (ds *DataSet[T]) LoadCsvReader(input_reader io.Reader, delim rune) error {
 
 				if c, err := strconv.ParseFloat(col, 64); err == nil {
 					concrete := T(c)
-					ds.datas = append(ds.datas, &concrete)
+					ds.datas = append(ds.datas, &RealDataCell[T]{concrete})
 				} else {
-					ds.datas = append(ds.datas, nil)
+					ds.datas = append(ds.datas, &StrDataCell{col})
 				}
 			}
 
@@ -272,6 +347,8 @@ func (ds *DataSet[T]) ForEachSample(cb func(DataSample[T]) bool) bool {
 	return true
 }
 
+// Compute variance of the target column.
+// This method will skip any non-real cells
 func (ds *DataSet[T]) TargetVariance() float64 {
 	n := ds.max_bound()
 	sum := 0.0
@@ -281,11 +358,14 @@ func (ds *DataSet[T]) TargetVariance() float64 {
 			y_i := ds.at(i, int(ds.trg_col_idx))
 			y_j := ds.at(j, int(ds.trg_col_idx))
 
-			if y_i == nil || y_j == nil {
+			if y_i == nil || y_j == nil || !y_i.IsReal() || !y_j.IsReal() {
 				continue
 			}
 
-			diff := *y_i - *y_j
+			yi, _ := y_i.(*RealDataCell[T])
+			yj, _ := y_j.(*RealDataCell[T])
+
+			diff := yi.Value - yj.Value
 			sum += float64(diff * diff)
 		}
 	}

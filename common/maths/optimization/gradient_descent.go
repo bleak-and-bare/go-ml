@@ -61,9 +61,8 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 		var batches []*dataset.DataSet[T]
 
 		if sample_size > g.BatchSize {
-			step := float32(g.BatchSize) / float32(sample_size)
-			for batch_i := float32(0.0); batch_i < 1.0; batch_i += step {
-				batch, err := ds.Extract(batch_i, batch_i+step)
+			for batch_i := 0; batch_i < sample_size; batch_i += g.BatchSize {
+				batch, err := ds.Extract(float32(batch_i)/float32(sample_size), float32(batch_i+g.BatchSize)/float32(sample_size))
 				if err != nil {
 					return err
 				}

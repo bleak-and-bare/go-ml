@@ -62,5 +62,11 @@ func (s *DataSample[T]) GetRow() int {
 }
 
 func (s *DataSample[T]) GetTarget() *T {
-	return s.owner.at(s.row, int(s.owner.trg_col_idx))
+	trg := s.owner.at(s.row, int(s.owner.trg_col_idx))
+	if trg.IsReal() {
+		t, _ := trg.(*RealDataCell[T])
+		return &t.Value
+	}
+
+	return nil
 }
