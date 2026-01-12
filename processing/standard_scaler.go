@@ -3,10 +3,10 @@ package processing
 import (
 	"iter"
 
-	"github.com/bleak-and-bare/machine_learning/common/dataset"
-	"github.com/bleak-and-bare/machine_learning/common/iterable"
-	"github.com/bleak-and-bare/machine_learning/common/iterable/adapter"
-	"github.com/bleak-and-bare/machine_learning/common/maths"
+	"github.com/bleak-and-bare/machine_learning/internal/dataset"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable/adapter"
+	"github.com/bleak-and-bare/machine_learning/internal/maths"
 	"golang.org/x/exp/constraints"
 )
 

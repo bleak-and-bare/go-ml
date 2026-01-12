@@ -4,6 +4,7 @@ import (
 	"iter"
 	"math"
 
+	"github.com/bleak-and-bare/machine_learning/internal/iterable/accumulator"
 	"golang.org/x/exp/constraints"
 )
 
@@ -12,15 +13,7 @@ type Number interface {
 }
 
 func Mean[T Number](iter iter.Seq[T]) T {
-	var sum T
-	count := 0
-
-	for v := range iter {
-		sum += v
-		count++
-	}
-
-	return sum / T(count)
+	return accumulator.Mean(iter)
 }
 
 func WelfordVar[T Number](iter iter.Seq[T]) (T, T, int) {

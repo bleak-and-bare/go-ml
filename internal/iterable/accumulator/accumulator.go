@@ -27,6 +27,19 @@ func Accumulate[T Number](v iter.Seq[T], a func(T, T) T) T {
 	return acc
 }
 
+// Returns mean of iterable components
+func Mean[T Number](iter iter.Seq[T]) T {
+	var sum T
+	count := 0
+
+	for v := range iter {
+		sum += v
+		count++
+	}
+
+	return sum / T(count)
+}
+
 // Returns sum of iterable components
 func Sum[T Number](v iter.Seq[T]) T {
 	return Accumulate(v, func(a, b T) T {

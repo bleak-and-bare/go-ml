@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bleak-and-bare/machine_learning/common/dataset"
+	"github.com/bleak-and-bare/machine_learning/internal/dataset"
 	"github.com/bleak-and-bare/machine_learning/processing"
 	"github.com/bleak-and-bare/machine_learning/regression/linear"
 )
@@ -13,7 +13,7 @@ func main() {
 	const pref_idx = 5
 	ds := dataset.NewDataSet[float32](pref_idx)
 
-	if err := ds.LoadCsv("./dataset/Student_Performance.csv", ','); err != nil {
+	if err := ds.LoadCsv("../dataset/Student_Performance.csv", ','); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load csv : %v", err)
 		return
 	}
@@ -46,9 +46,15 @@ func main() {
 		return
 	}
 
-	r := m.PredictOn(test)
+	r := m.PredictOn(train)
+	fmt.Printf("---------------------------------- Train set\n")
+	fmt.Printf("Skipped rows = %v\n", r.SkippedRows)
+	fmt.Printf("Mean absolute error = %v\n", r.MeanAbsoluteErr)
+	fmt.Printf("RMSE = %v\n", r.RootMeanSquareErr)
+	fmt.Printf("R2 Score = %v\n", r.Score)
 
-	fmt.Printf("----------------------------------\n")
+	r = m.PredictOn(test)
+	fmt.Printf("---------------------------------- Test set\n")
 	fmt.Printf("Skipped rows = %v\n", r.SkippedRows)
 	fmt.Printf("Mean absolute error = %v\n", r.MeanAbsoluteErr)
 	fmt.Printf("RMSE = %v\n", r.RootMeanSquareErr)

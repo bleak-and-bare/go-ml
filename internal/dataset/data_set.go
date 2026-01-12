@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bleak-and-bare/machine_learning/common/iterable"
-	"github.com/bleak-and-bare/machine_learning/common/maths"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable"
+	"github.com/bleak-and-bare/machine_learning/internal/maths"
 	"golang.org/x/exp/constraints"
 )
 

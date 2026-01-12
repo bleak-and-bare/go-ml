@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/bleak-and-bare/machine_learning/common/dataset"
-	"github.com/bleak-and-bare/machine_learning/common/maths/metrics"
-	"github.com/bleak-and-bare/machine_learning/common/maths/optimization"
+	"github.com/bleak-and-bare/machine_learning/internal/dataset"
+	"github.com/bleak-and-bare/machine_learning/internal/maths/metrics"
+	"github.com/bleak-and-bare/machine_learning/internal/maths/optimization"
 	"github.com/bleak-and-bare/machine_learning/regression"
 	"golang.org/x/exp/constraints"
 )
@@ -23,7 +23,7 @@ func NewLinearReg[T constraints.Float]() LinearRegression[T] {
 	return LinearRegression[T]{
 		Alpha:     1e-4,
 		Epsilon:   1e-5,
-		MaxEpochs: 1000,
+		MaxEpochs: 5000,
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bleak-and-bare/machine_learning/common/dataset"
+	"github.com/bleak-and-bare/machine_learning/internal/dataset"
 )
 
 func mock_data_set() (dataset.DataSet[float32], error) {

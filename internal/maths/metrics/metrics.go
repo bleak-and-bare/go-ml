@@ -4,11 +4,11 @@ import (
 	"iter"
 	"math"
 
-	"github.com/bleak-and-bare/machine_learning/common/iterable"
-	"github.com/bleak-and-bare/machine_learning/common/iterable/accumulator"
-	"github.com/bleak-and-bare/machine_learning/common/iterable/adapter"
-	"github.com/bleak-and-bare/machine_learning/common/iterable/vector"
-	"github.com/bleak-and-bare/machine_learning/common/maths"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable/accumulator"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable/adapter"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable/vector"
+	"github.com/bleak-and-bare/machine_learning/internal/maths"
 	"golang.org/x/exp/constraints"
 )
 

@@ -8,8 +8,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/bleak-and-bare/machine_learning/common/dataset"
-	"github.com/bleak-and-bare/machine_learning/common/maths"
+	"github.com/bleak-and-bare/machine_learning/internal/dataset"
+	"github.com/bleak-and-bare/machine_learning/internal/maths"
 	"golang.org/x/exp/constraints"
 )
 
@@ -111,9 +111,10 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 			stop_here := false
 			dist := maths.L2Dist(slices.Values(n_theta), slices.Values(g.theta))
 			norm_theta := maths.L2Norm(slices.Values(g.theta))
+			coef := dist / T(norm_theta+1e-8)
 
-			// relative convergence criterion
-			if dist/T(norm_theta+1e-8) < T(g.Epsilon) {
+			// coefficient of determination: relative convergence criterion
+			if coef < T(g.Epsilon) {
 				fmt.Printf("Total epochs : %d\n", epoch+1)
 				stop_here = true
 			}

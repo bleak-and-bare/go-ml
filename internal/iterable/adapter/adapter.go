@@ -3,7 +3,7 @@ package adapter
 import (
 	"iter"
 
-	"github.com/bleak-and-bare/machine_learning/common/iterable"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable"
 	"golang.org/x/exp/constraints"
 )
 
