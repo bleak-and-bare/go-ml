@@ -3,9 +3,10 @@ package linear
 import (
 	"errors"
 	"fmt"
-	"math"
+	"slices"
 
 	"github.com/bleak-and-bare/machine_learning/common/dataset"
+	"github.com/bleak-and-bare/machine_learning/common/maths/metrics"
 	"github.com/bleak-and-bare/machine_learning/common/maths/optimization"
 	"github.com/bleak-and-bare/machine_learning/regression"
 	"golang.org/x/exp/constraints"
@@ -20,9 +21,9 @@ type LinearRegression[T constraints.Float] struct {
 
 func NewLinearReg[T constraints.Float]() LinearRegression[T] {
 	return LinearRegression[T]{
-		Alpha:     1e-2,
-		Epsilon:   1e-3,
-		MaxEpochs: 10_000,
+		Alpha:     1e-4,
+		Epsilon:   1e-5,
+		MaxEpochs: 1000,
 	}
 }
 
@@ -90,38 +91,33 @@ func (m *LinearRegression[T]) PredictOn(ds *dataset.DataSet[T]) regression.Regre
 		DataSet: ds,
 	}
 
-	ds.ForEachSample(func(ds dataset.DataSample[T]) bool {
+	targets := make([]T, 0, ds.Size())
+	predictions := make([]T, 0, ds.Size())
+	for ds := range ds.Samples() {
 		sample, err := ds.GetSampleTest()
 		if err != nil {
 			r.SkippedRows++
-			return true
+			continue
 		}
 
 		pred, err := m.Predict(sample)
 		if err != nil {
 			r.SkippedRows++
-			return true
+			continue
 		}
 
 		if y := ds.GetTarget(); y != nil {
-			diff := *y - pred
-			r.Predictions = append(r.Predictions, pred)
-			r.MeanAbsoluteErr += math.Abs(float64(diff))
-			r.RootMeanSquareErr += float64(diff * diff)
+			targets = append(targets, *y)
+			predictions = append(predictions, pred)
 		} else {
 			r.SkippedRows++
 		}
-
-		return true
-	})
-
-	count := ds.Size() - uint32(r.SkippedRows)
-	if count > 0 {
-		var_estimator := r.RootMeanSquareErr / float64(count)
-		r.Score = 1 - var_estimator/ds.TargetVariance()
-		r.RootMeanSquareErr = math.Sqrt(r.RootMeanSquareErr) / float64(count)
-		r.MeanAbsoluteErr /= float64(count)
 	}
+
+	r.Predictions = predictions
+	r.Score = metrics.R2Score(slices.Values(targets), slices.Values(predictions))
+	r.RootMeanSquareErr = metrics.RMSE(slices.Values(targets), slices.Values(predictions))
+	r.MeanAbsoluteErr = metrics.MAE(slices.Values(targets), slices.Values(predictions))
 
 	return r
 }

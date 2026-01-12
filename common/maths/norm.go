@@ -1,22 +1,19 @@
 package maths
 
 import (
-	"errors"
+	"iter"
 	"math"
 
+	"github.com/bleak-and-bare/machine_learning/common/iterable/accumulator"
+	"github.com/bleak-and-bare/machine_learning/common/iterable/adapter"
+	"github.com/bleak-and-bare/machine_learning/common/iterable/vector"
 	"golang.org/x/exp/constraints"
 )
 
-func L2Dist[T constraints.Float](v, w []T) (T, error) {
-	if len(v) != len(w) {
-		return 0.0, errors.New("MinkowskiDist : vectors do not have the same dimension")
-	}
+func L2Dist[T constraints.Float](v, w iter.Seq[T]) T {
+	return L2Norm(vector.Diff(v, w))
+}
 
-	var sum T
-	for i := range v {
-		diff := v[i] - w[i]
-		sum += diff * diff
-	}
-
-	return T(math.Sqrt(float64(sum))), nil
+func L2Norm[T constraints.Float](v iter.Seq[T]) T {
+	return T(math.Sqrt(float64(accumulator.Sum(adapter.Squared(v)))))
 }

@@ -3,8 +3,10 @@ package optimization
 import (
 	"errors"
 	"fmt"
-	"math/rand/v2"
+	"math"
+	"runtime"
 	"slices"
+	"sync"
 
 	"github.com/bleak-and-bare/machine_learning/common/dataset"
 	"github.com/bleak-and-bare/machine_learning/common/maths"
@@ -31,7 +33,8 @@ func NewSGD[T constraints.Float]() GradientDescent[T] {
 	return GradientDescent[T]{
 		theta:     nil,
 		BatchSize: 128,
-		Alpha:     1e-3,
+		Alpha:     1e-4,
+		Epsilon:   1e-5,
 		MaxEpochs: 10_1000,
 	}
 }
@@ -40,12 +43,9 @@ func (g *GradientDescent[T]) GetParams() []T {
 	return g.theta
 }
 
-func (g *GradientDescent[T]) initialize_parameters(feat_count int) {
-	g.theta = make([]T, feat_count+1)
-
-	for i := range g.theta {
-		g.theta[i] = T(rand.Float32())
-	}
+func (g *GradientDescent[T]) initialize_parameters(ds *dataset.DataSet[T]) {
+	g.theta = make([]T, ds.FeatCount()+1)
+	g.theta[0] = ds.TargetMean()
 }
 
 func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
@@ -54,7 +54,7 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 	}
 
 	sample_size := int(ds.Size())
-	n_theta := slices.Clone(g.theta)
+	n_theta := make([]T, len(g.theta))
 
 	for epoch := 0; epoch < int(g.MaxEpochs); epoch++ {
 		ds.Shuffle()
@@ -73,19 +73,48 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 		}
 
 		for _, batch := range batches {
-			for j := range g.theta {
-				c, err := g.CostPartialDiff(j, g.theta, batch)
-				if err != nil {
-					return err
-				}
+			var wg sync.WaitGroup
+			num_workers := min(runtime.NumCPU(), len(g.theta))
 
-				n_theta[j] = g.theta[j] - T(g.Alpha)*c
+			jobs := make(chan int, len(g.theta))
+			err_ch := make(chan error, len(g.theta))
+
+			for range num_workers {
+				wg.Go(func() {
+					for j := range jobs {
+						c, err := g.CostPartialDiff(j, g.theta, batch)
+						if err != nil {
+							err_ch <- err
+							return
+						}
+
+						n_theta[j] = g.theta[j] - T(g.Alpha)*c
+						if math.IsNaN(float64(n_theta[j])) || math.IsInf(float64(n_theta[j]), 0) {
+							panic("WTF ?")
+						}
+					}
+				})
+			}
+
+			for i := range g.theta {
+				jobs <- i
+			}
+			close(jobs)
+
+			wg.Wait()
+			close(err_ch)
+
+			for err := range err_ch {
+				return err
 			}
 
 			stop_here := false
-			d, _ := maths.L2Dist(n_theta, g.theta)
-			if d < T(g.Epsilon) {
-				fmt.Printf("Total epochs : %d\n", epoch)
+			dist := maths.L2Dist(slices.Values(n_theta), slices.Values(g.theta))
+			norm_theta := maths.L2Norm(slices.Values(g.theta))
+
+			// relative convergence criterion
+			if dist/T(norm_theta+1e-8) < T(g.Epsilon) {
+				fmt.Printf("Total epochs : %d\n", epoch+1)
 				stop_here = true
 			}
 
@@ -103,7 +132,7 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 }
 
 func (g *GradientDescent[T]) Fit(ds *dataset.DataSet[T]) error {
-	g.initialize_parameters(ds.FeatCount())
+	g.initialize_parameters(ds)
 	if err := g.process(ds); err != nil {
 		return err
 	}

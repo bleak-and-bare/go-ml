@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"math"
 	"math/rand"
 	"os"
@@ -12,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bleak-and-bare/machine_learning/common/iterable"
+	"github.com/bleak-and-bare/machine_learning/common/maths"
 	"golang.org/x/exp/constraints"
 )
 
@@ -37,6 +40,7 @@ func NewDataSet[T constraints.Float](trg_col_idx uint32) DataSet[T] {
 	return ds
 }
 
+// This method duplicate every underlying data containers
 func (ds *DataSet[T]) Copy() DataSet[T] {
 	copy := *ds
 	copy.headers = slices.Clone(ds.headers)
@@ -45,7 +49,8 @@ func (ds *DataSet[T]) Copy() DataSet[T] {
 	return copy
 }
 
-func (ds *DataSet[T]) MapColumn(i int, cb func(DataCell) T) *DataSet[T] {
+// This method can be applied on dropped column
+func (ds *DataSet[T]) MapColumnAt(i int, cb func(DataCell) DataCell) *DataSet[T] {
 	if i < 0 || i >= len(ds.headers) {
 		return ds
 	}
@@ -58,8 +63,15 @@ func (ds *DataSet[T]) MapColumn(i int, cb func(DataCell) T) *DataSet[T] {
 	return ds
 }
 
-func (ds *DataSet[T]) set_at(i, j int, v T) {
-	ds.datas[i*len(ds.headers)+j] = &RealDataCell[T]{v}
+// This method can be applied on dropped column
+func (ds *DataSet[T]) MapColumn(name string, cb func(DataCell) DataCell) *DataSet[T] {
+	return ds.MapColumnAt(slices.IndexFunc(ds.headers, func(h header_t) bool {
+		return h.name == name
+	}), cb)
+}
+
+func (ds *DataSet[T]) set_at(i, j int, v DataCell) {
+	ds.datas[i*len(ds.headers)+j] = v
 }
 
 func (ds *DataSet[T]) at(i, j int) DataCell {
@@ -154,6 +166,33 @@ func (ds *DataSet[T]) GetColumnNames() []string {
 	return cols
 }
 
+func (ds *DataSet[T]) UniqueAt(j int) []DataCell {
+	if j < 0 || j >= len(ds.headers) {
+		return nil
+	}
+
+	max_bound := ds.max_bound()
+	lookup := make(map[DataCell]struct{})
+	var uniques []DataCell
+
+	for i := ds.min_bound(); i < max_bound; i++ {
+		c := ds.at(i, j)
+		if _, found := lookup[c]; !found {
+			lookup[c] = struct{}{}
+			uniques = append(uniques, c)
+		}
+	}
+
+	return uniques
+}
+
+func (ds *DataSet[T]) Unique(column string) []DataCell {
+	return ds.UniqueAt(slices.IndexFunc(ds.headers, func(h header_t) bool {
+		return h.name == column
+	}))
+}
+
+// This method returns a DataSet with same reference to the underlying datas
 func (ds *DataSet[T]) Extract(min_range float32, max_range float32) (*DataSet[T], error) {
 	if min_range > max_range {
 		return nil, errors.New("DataSet.Extract : invalid range provided")
@@ -243,8 +282,8 @@ func (ds *DataSet[T]) Head(max uint32) {
 			continue
 		}
 
-		line_sep.WriteString(strings.Repeat("-", max_lengths[i]+len(tab)+1))
-		fmt.Printf("%v%v%v|", h.name, strings.Repeat(" ", max_lengths[i]-len(h.name)), tab)
+		line_sep.WriteString(strings.Repeat("-", max_lengths[i]+len(tab)+2))
+		fmt.Printf("%v%v%v| ", h.name, strings.Repeat(" ", max_lengths[i]-len(h.name)), tab)
 	}
 	fmt.Printf("\n%v\n", line_sep.String())
 
@@ -264,7 +303,7 @@ func (ds *DataSet[T]) Head(max uint32) {
 				str = c.Value
 			}
 
-			fmt.Printf("%v%v%v|", str, strings.Repeat(" ", max_lengths[j]-len(str)), tab)
+			fmt.Printf("%v%v%v| ", str, strings.Repeat(" ", max_lengths[j]-len(str)), tab)
 		}
 		fmt.Println("")
 	}
@@ -304,8 +343,10 @@ func (ds *DataSet[T]) LoadCsvReader(input_reader io.Reader, delim rune) error {
 				if c, err := strconv.ParseFloat(col, 64); err == nil {
 					concrete := T(c)
 					ds.datas = append(ds.datas, &RealDataCell[T]{concrete})
-				} else {
+				} else if len(col) > 0 {
 					ds.datas = append(ds.datas, &StrDataCell{col})
+				} else {
+					ds.datas = append(ds.datas, nil)
 				}
 			}
 
@@ -334,43 +375,42 @@ func (ds *DataSet[T]) LoadCsv(path string, delim rune) error {
 	return ds.LoadCsvReader(file, delim)
 }
 
-func (ds *DataSet[T]) ForEachSample(cb func(DataSample[T]) bool) bool {
+func (ds *DataSet[T]) Samples() iter.Seq[DataSample[T]] {
+	min_bound := ds.min_bound()
 	max_bound := ds.max_bound()
-	for i := ds.min_bound(); i < max_bound; i++ {
-		if !cb(DataSample[T]{
-			owner: ds,
-			row:   i,
-		}) {
-			return false
+
+	return func(yield func(DataSample[T]) bool) {
+		for i := min_bound; i < max_bound; i++ {
+			if !yield(DataSample[T]{
+				owner: ds,
+				row:   i,
+			}) {
+				return
+			}
 		}
+
 	}
-	return true
+}
+
+func (ds *DataSet[T]) real_trg_col() iter.Seq[T] {
+	return iterable.Map(iterable.Filter(ds.TargetColumn(), func(c DataCell) bool {
+		return c != nil && c.IsReal()
+	}), func(c DataCell) T {
+		v, _ := c.(*RealDataCell[T])
+		return v.Value
+	})
+}
+
+// Compute mean of the target column.
+// This method will skip any non-real cells
+func (ds *DataSet[T]) TargetMean() T {
+	return maths.Mean(ds.real_trg_col())
 }
 
 // Compute variance of the target column.
 // This method will skip any non-real cells
 func (ds *DataSet[T]) TargetVariance() float64 {
-	n := ds.max_bound()
-	sum := 0.0
-
-	for i := range n {
-		for j := i + 1; j < n; j++ {
-			y_i := ds.at(i, int(ds.trg_col_idx))
-			y_j := ds.at(j, int(ds.trg_col_idx))
-
-			if y_i == nil || y_j == nil || !y_i.IsReal() || !y_j.IsReal() {
-				continue
-			}
-
-			yi, _ := y_i.(*RealDataCell[T])
-			yj, _ := y_j.(*RealDataCell[T])
-
-			diff := yi.Value - yj.Value
-			sum += float64(diff * diff)
-		}
-	}
-
-	return sum / float64(n*n)
+	return float64(maths.Variance(ds.real_trg_col()))
 }
 
 func (ds *DataSet[T]) Shuffle() *DataSet[T] {
@@ -387,4 +427,34 @@ func (ds *DataSet[T]) Shuffle() *DataSet[T] {
 	})
 
 	return ds
+}
+
+func (ds *DataSet[T]) ColumnAt(j int) iter.Seq[DataCell] {
+	if j < 0 || j >= len(ds.headers) {
+		return func(func(DataCell) bool) {}
+	}
+
+	return func(yield func(DataCell) bool) {
+		max_bound := ds.max_bound()
+		for i := ds.min_bound(); i < max_bound; i++ {
+			c := ds.at(i, j)
+			if c == nil {
+				continue
+			}
+
+			if !yield(c) {
+				return
+			}
+		}
+	}
+}
+
+func (ds *DataSet[T]) Column(name string) iter.Seq[DataCell] {
+	return ds.ColumnAt(slices.IndexFunc(ds.headers, func(h header_t) bool {
+		return h.name == name
+	}))
+}
+
+func (ds *DataSet[T]) TargetColumn() iter.Seq[DataCell] {
+	return ds.ColumnAt(int(ds.trg_col_idx))
 }

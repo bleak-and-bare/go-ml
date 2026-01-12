@@ -28,29 +28,30 @@ func PartialDiffMSE[T constraints.Float](j int, params []T, ds *dataset.DataSet[
 	var sum T
 	var caught_err error
 
-	if !ds.ForEachSample(func(ds dataset.DataSample[T]) bool {
+	for ds := range ds.Samples() {
 		y := ds.GetTarget()
 
 		if y != nil {
 			hypo, err := h.On(params, &ds)
 			if err != nil {
 				caught_err = err
-				return false
+				break
 			}
 
 			diff, err := h.Diff(j, params, &ds)
 			if err != nil {
 				caught_err = err
-				return false
+				break
 			}
 
 			sum += diff * (hypo - *y)
-			return true
+		} else {
+			caught_err = fmt.Errorf("Target not found at <%d, %d>", ds.GetRow(), j-1)
+			break
 		}
+	}
 
-		caught_err = fmt.Errorf("Target not found at <%d, %d>", ds.GetRow(), j-1)
-		return false
-	}) {
+	if caught_err != nil {
 		return 0.0, caught_err
 	}
 
