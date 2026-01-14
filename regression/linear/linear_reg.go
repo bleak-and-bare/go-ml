@@ -6,8 +6,11 @@ import (
 	"slices"
 
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable"
+	"github.com/bleak-and-bare/machine_learning/internal/maths"
 	"github.com/bleak-and-bare/machine_learning/internal/maths/metrics"
 	"github.com/bleak-and-bare/machine_learning/internal/maths/optimization"
+	"github.com/bleak-and-bare/machine_learning/internal/maths/vector"
 	"github.com/bleak-and-bare/machine_learning/regression"
 	"golang.org/x/exp/constraints"
 )
@@ -15,15 +18,13 @@ import (
 type LinearRegression[T constraints.Float] struct {
 	theta     []T     // parameter list
 	Alpha     float32 // learning rate
-	Epsilon   float32
-	MaxEpochs uint32
+	Threshold maths.Threshold
 }
 
 func NewLinearReg[T constraints.Float]() LinearRegression[T] {
 	return LinearRegression[T]{
 		Alpha:     1e-4,
-		Epsilon:   1e-5,
-		MaxEpochs: 5000,
+		Threshold: maths.DefThreshold(),
 	}
 }
 
@@ -70,12 +71,20 @@ func linear_reg_cost_partial_diff[T constraints.Float](j int, theta []T, ds *dat
 	return optimization.PartialDiffMSE(j, theta, ds, &h)
 }
 
+func linear_reg_cost[T constraints.Float](theta []T, ds *dataset.DataSet[T]) T {
+	return optimization.MSE(theta, ds, func(theta []T, x []T) T {
+		return theta[0] + vector.DotProduct(
+			iterable.Skip(slices.Values(theta), 1),
+			slices.Values(x),
+		)
+	}, 0.0)
+}
+
 func (m *LinearRegression[T]) Fit(ds *dataset.DataSet[T]) error {
-	sgd := optimization.NewSGD[T]()
-	sgd.Epsilon = m.Epsilon
+	sgd := optimization.NewSGD[T](m.Threshold)
 	sgd.Alpha = m.Alpha
-	sgd.MaxEpochs = m.MaxEpochs
 	sgd.CostPartialDiff = linear_reg_cost_partial_diff
+	sgd.Cost = linear_reg_cost
 
 	if err := sgd.Fit(ds); err != nil {
 		return err

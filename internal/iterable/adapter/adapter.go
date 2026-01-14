@@ -10,7 +10,7 @@ import (
 func PtrDerefAdapter[T any](it iter.Seq[*T]) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		for p := range it {
-			if it != nil {
+			if p != nil {
 				if !yield(*p) {
 					return
 				}

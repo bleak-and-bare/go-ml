@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
+	"github.com/bleak-and-bare/machine_learning/processing"
 	"github.com/bleak-and-bare/machine_learning/regression/linear"
 )
 
@@ -15,12 +16,18 @@ func main() {
 		return
 	}
 
-	ds.DropColumnAt(0).Head(5)
+	ds.DropColumnAt(0)
 	train, _ := ds.Extract(0.0, 0.75)
 	test, _ := ds.Extract(0.75, 1.0)
 
+	std_scaler := processing.StandardScaler[float32]{}
+	for _, col := range train.GetColumnNames() {
+		std_scaler.FitTransformDataSet(train, col)
+		std_scaler.TransformDataSet(test, col)
+	}
+	train.Head(5)
+
 	m := linear.NewLinearReg[float32]()
-	m.Alpha = 1e-2
 	if err := m.Fit(train); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to fit model : %v", err)
 		return

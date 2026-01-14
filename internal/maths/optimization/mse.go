@@ -4,6 +4,9 @@ import (
 	"fmt"
 
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable/accumulator"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable/adapter"
 	"golang.org/x/exp/constraints"
 )
 
@@ -56,4 +59,16 @@ func PartialDiffMSE[T constraints.Float](j int, params []T, ds *dataset.DataSet[
 	}
 
 	return T(2/float32(sample_size)) * sum, nil
+}
+
+/*
+Mean squared error
+Parameters :
+- h : hypothesis function
+- placeholder : default value for invalid cells found in the dataset
+*/
+func MSE[T constraints.Float](params []T, ds *dataset.DataSet[T], h func(params []T, sample []T) T, placeholder T) T {
+	return accumulator.Mean(adapter.Squared(iterable.Map(ds.Samples(), func(ds dataset.DataSample[T]) T {
+		return h(params, ds.GetSampleTestNoErr(placeholder)) - *ds.GetTarget()
+	})))
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
+	"github.com/bleak-and-bare/machine_learning/processing"
 )
 
 func TestLinearRegression_Fit(t *testing.T) {
@@ -45,6 +46,10 @@ func TestLinearRegression_PredictOn(t *testing.T) {
 
 	ds.LoadCsvReader(str, ',')
 	m := NewLinearReg[float32]()
+
+	scaler := processing.StandardScaler[float32]{}
+	scaler.FitTransformDataSet(&ds, "x")
+	scaler.FitTransformDataSet(&ds, "y")
 
 	if err := m.Fit(&ds); err != nil {
 		t.Error("LinearRegression.Fit should not error")

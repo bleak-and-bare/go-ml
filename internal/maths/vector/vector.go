@@ -3,6 +3,7 @@ package vector
 import (
 	"iter"
 
+	"github.com/bleak-and-bare/machine_learning/internal/iterable/accumulator"
 	"golang.org/x/exp/constraints"
 )
 
@@ -32,11 +33,17 @@ func Transform[T Number](v, w iter.Seq[T], t func(T, T) T) iter.Seq[T] {
 				break
 			}
 
-			if !yield(v - w) {
+			if !yield(t(v, w)) {
 				break
 			}
 		}
 	}
+}
+
+func DotProduct[T Number](v, w iter.Seq[T]) T {
+	return accumulator.Sum(Transform(v, w, func(v, w T) T {
+		return v * w
+	}))
 }
 
 // Returns an iterator for the difference of the two vectors

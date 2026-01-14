@@ -3,10 +3,14 @@ package optimization
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable"
+	"github.com/bleak-and-bare/machine_learning/internal/maths"
+	"github.com/bleak-and-bare/machine_learning/internal/maths/vector"
 	"golang.org/x/exp/constraints"
 )
 
@@ -41,6 +45,15 @@ func linear_reg_cost_partial_diff[T constraints.Float](j int, theta []T, ds *dat
 	return PartialDiffMSE(j, theta, ds, &h)
 }
 
+func linear_reg_cost[T constraints.Float](theta []T, ds *dataset.DataSet[T]) T {
+	return MSE(theta, ds, func(theta []T, x []T) T {
+		return theta[0] + vector.DotProduct(
+			iterable.Skip(slices.Values(theta), 1),
+			slices.Values(x),
+		)
+	}, 0.0)
+}
+
 func TestGradientDescent(t *testing.T) {
 	ds := dataset.NewDataSet[float32](1)
 	str := strings.NewReader(`x,y
@@ -49,7 +62,8 @@ func TestGradientDescent(t *testing.T) {
 2,2`)
 
 	ds.LoadCsvReader(str, ',')
-	sgd := NewSGD[float32]()
+	sgd := NewSGD[float32](maths.DefThreshold())
+	sgd.Cost = linear_reg_cost
 	sgd.CostPartialDiff = linear_reg_cost_partial_diff
 
 	if err := sgd.Fit(&ds); err != nil {

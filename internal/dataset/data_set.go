@@ -222,8 +222,7 @@ func (ds *DataSet[T]) max_bound() int {
 }
 
 func (ds *DataSet[T]) Size() uint32 {
-	rng := float64(ds.max_range - ds.min_range)
-	return uint32(math.Round(rng * float64(ds.raw_count())))
+	return uint32(ds.max_bound()) - uint32(ds.min_bound())
 }
 
 func (ds *DataSet[T]) Empty() bool {
@@ -419,9 +418,10 @@ func (ds *DataSet[T]) Shuffle() *DataSet[T] {
 	real_size := int(ds.raw_count())
 
 	rand.Shuffle(int(ds.Size()), func(i, j int) {
-		if start+i < real_size && start+j < real_size {
+		shift_i, shift_j := start+i, start+j
+		if shift_i < real_size && shift_j < real_size {
 			for k := range cols {
-				ds.datas[i*cols+k], ds.datas[j*cols+k] = ds.datas[j*cols+k], ds.datas[i*cols+k]
+				ds.datas[shift_i*cols+k], ds.datas[shift_j*cols+k] = ds.datas[shift_j*cols+k], ds.datas[shift_i*cols+k]
 			}
 		}
 	})
