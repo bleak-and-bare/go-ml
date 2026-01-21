@@ -4,6 +4,38 @@ import (
 	"iter"
 )
 
+func Append[T any](it iter.Seq[T], values ...T) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for v := range it {
+			if !yield(v) {
+				return
+			}
+		}
+
+		for _, v := range values {
+			if !yield(v) {
+				return
+			}
+		}
+	}
+}
+
+func Prepend[T any](it iter.Seq[T], values ...T) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for _, v := range values {
+			if !yield(v) {
+				return
+			}
+		}
+
+		for v := range it {
+			if !yield(v) {
+				return
+			}
+		}
+	}
+}
+
 // skip n-first iterations
 func Skip[T any](it iter.Seq[T], n int) iter.Seq[T] {
 	return func(yield func(T) bool) {
@@ -40,4 +72,23 @@ func Filter[T any](it iter.Seq[T], f func(T) bool) iter.Seq[T] {
 			}
 		}
 	}
+}
+
+func Pointers[T any](it []T) iter.Seq[*T] {
+	return func(yield func(*T) bool) {
+		for i := range it {
+			if !yield(&it[i]) {
+				return
+			}
+		}
+	}
+}
+
+// Do remember that this is a O(n) operation
+func Count[T any](it iter.Seq[T]) int {
+	count := 0
+	for range it {
+		count++
+	}
+	return count
 }

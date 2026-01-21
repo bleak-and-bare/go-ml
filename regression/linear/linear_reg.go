@@ -9,7 +9,6 @@ import (
 	"github.com/bleak-and-bare/machine_learning/internal/iterable"
 	"github.com/bleak-and-bare/machine_learning/internal/maths"
 	"github.com/bleak-and-bare/machine_learning/internal/maths/metrics"
-	"github.com/bleak-and-bare/machine_learning/internal/maths/optimization"
 	"github.com/bleak-and-bare/machine_learning/internal/maths/vector"
 	"github.com/bleak-and-bare/machine_learning/regression"
 	"golang.org/x/exp/constraints"
@@ -40,59 +39,6 @@ func (m *LinearRegression[T]) PrintRegLineEquation() {
 		}
 	}
 	fmt.Println("")
-}
-
-type linear_reg_hypo[T constraints.Float] struct{}
-
-func (h *linear_reg_hypo[T]) On(params []T, sample *dataset.DataSample[T]) (T, error) {
-	d, err := sample.DotProduct(params[1:])
-	if err != nil {
-		return 0.0, err
-	}
-
-	return params[0] + d, nil
-}
-
-func (h *linear_reg_hypo[T]) Diff(j int, params []T, sample *dataset.DataSample[T]) (T, error) {
-	if j == 0 {
-		return 1, nil
-	}
-
-	x := sample.GetFeat(j - 1)
-	if x == nil {
-		return 0.0, fmt.Errorf("No feature found at <%d, %d>", sample.GetRow(), j-1)
-	}
-
-	return *x, nil
-}
-
-func linear_reg_cost_partial_diff[T constraints.Float](j int, theta []T, ds *dataset.DataSet[T]) (T, error) {
-	var h linear_reg_hypo[T]
-	return optimization.PartialDiffMSE(j, theta, ds, &h)
-}
-
-func linear_reg_cost[T constraints.Float](theta []T, ds *dataset.DataSet[T]) T {
-	return optimization.MSE(theta, ds, func(theta []T, x []T) T {
-		return theta[0] + vector.DotProduct(
-			iterable.Skip(slices.Values(theta), 1),
-			slices.Values(x),
-		)
-	}, 0.0)
-}
-
-func (m *LinearRegression[T]) Fit(ds *dataset.DataSet[T]) error {
-	sgd := optimization.NewSGD[T](m.Threshold)
-	sgd.Alpha = m.Alpha
-	sgd.CostPartialDiff = linear_reg_cost_partial_diff
-	sgd.Cost = linear_reg_cost
-
-	if err := sgd.Fit(ds); err != nil {
-		return err
-	}
-
-	m.theta = sgd.GetParams()
-
-	return nil
 }
 
 func (m *LinearRegression[T]) PredictOn(ds *dataset.DataSet[T]) regression.RegressionReport[T] {
@@ -140,10 +86,5 @@ func (m *LinearRegression[T]) Predict(x []T) (T, error) {
 		return 0.0, errors.New("Invalid vector provided")
 	}
 
-	sum := m.theta[0]
-	for i := range x {
-		sum += x[i] * m.theta[i+1]
-	}
-
-	return sum, nil
+	return vector.DotProduct(slices.Values(m.theta), iterable.Prepend(slices.Values(x), 1)), nil
 }

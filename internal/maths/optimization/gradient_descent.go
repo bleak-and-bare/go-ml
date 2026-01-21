@@ -15,12 +15,11 @@ import (
 
 // Stochastic Gradient Descent
 type GradientDescent[T constraints.Float] struct {
-	theta           []T
-	BatchSize       int
-	Alpha           float32 // learning rate
-	Threshold       maths.Threshold
-	Cost            func(theta []T, ds *dataset.DataSet[T]) T
-	CostPartialDiff func(j int, theta []T, ds *dataset.DataSet[T]) (T, error)
+	theta     []T
+	BatchSize int
+	Alpha     float32 // learning rate
+	Threshold maths.Threshold
+	Cost      maths.BatchFunction[T]
 }
 
 // Stochastic Gradient Descent
@@ -57,7 +56,7 @@ func (g *GradientDescent[T]) gradient_norm(ds *dataset.DataSet[T]) T {
 	for range num_workers {
 		wg.Go(func() {
 			for j := range jobs {
-				g_j, _ := g.CostPartialDiff(j, g.theta, ds)
+				g_j, _ := g.Cost.Diff(j, g.theta, ds)
 				grad[j] = g_j
 			}
 		})
@@ -77,13 +76,13 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 		return errors.New("No cost function supplied")
 	}
 
-	if g.CostPartialDiff == nil {
-		return errors.New("No partial derivative function supplied")
-	}
-
 	sample_size := int(ds.Size())
-	prev_cost := g.Cost(g.theta, ds)
 	n_theta := make([]T, len(g.theta))
+
+	prev_cost, err := g.Cost.On(g.theta, ds)
+	if err != nil {
+		return err
+	}
 
 	for epoch := 0; epoch < int(g.Threshold.MaxEpochs); epoch++ {
 		var batches []*dataset.DataSet[T]
@@ -111,7 +110,7 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 			for range num_workers {
 				wg.Go(func() {
 					for j := range jobs {
-						c, err := g.CostPartialDiff(j, g.theta, batch)
+						c, err := g.Cost.Diff(j, g.theta, batch)
 						if err != nil {
 							err_ch <- err
 							return
@@ -147,7 +146,11 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 				break
 			}
 
-			cost := g.Cost(g.theta, ds)
+			cost, err := g.Cost.On(g.theta, ds)
+			if err != nil {
+				return err
+			}
+
 			rel_cost := math.Abs(float64(cost-prev_cost)) / max(1, math.Abs(float64(prev_cost)))
 			prev_cost = cost
 

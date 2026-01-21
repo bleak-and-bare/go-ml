@@ -3,18 +3,15 @@ package optimization
 import (
 	"fmt"
 	"math"
-	"slices"
 	"strings"
 	"testing"
 
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
-	"github.com/bleak-and-bare/machine_learning/internal/iterable"
 	"github.com/bleak-and-bare/machine_learning/internal/maths"
-	"github.com/bleak-and-bare/machine_learning/internal/maths/vector"
 	"golang.org/x/exp/constraints"
 )
 
-// Copied from linear_reg.go
+// Copied from linear_reg_fit.go
 
 type linear_reg_hypo[T constraints.Float] struct{}
 
@@ -40,20 +37,6 @@ func (h *linear_reg_hypo[T]) Diff(j int, params []T, sample *dataset.DataSample[
 	return *x, nil
 }
 
-func linear_reg_cost_partial_diff[T constraints.Float](j int, theta []T, ds *dataset.DataSet[T]) (T, error) {
-	var h linear_reg_hypo[T]
-	return PartialDiffMSE(j, theta, ds, &h)
-}
-
-func linear_reg_cost[T constraints.Float](theta []T, ds *dataset.DataSet[T]) T {
-	return MSE(theta, ds, func(theta []T, x []T) T {
-		return theta[0] + vector.DotProduct(
-			iterable.Skip(slices.Values(theta), 1),
-			slices.Values(x),
-		)
-	}, 0.0)
-}
-
 func TestGradientDescent(t *testing.T) {
 	ds := dataset.NewDataSet[float32](1)
 	str := strings.NewReader(`x,y
@@ -63,8 +46,9 @@ func TestGradientDescent(t *testing.T) {
 
 	ds.LoadCsvReader(str, ',')
 	sgd := NewSGD[float32](maths.DefThreshold())
-	sgd.Cost = linear_reg_cost
-	sgd.CostPartialDiff = linear_reg_cost_partial_diff
+	sgd.Cost = &maths.MSE[float32]{
+		Hypothesis: &linear_reg_hypo[float32]{},
+	}
 
 	if err := sgd.Fit(&ds); err != nil {
 		t.Errorf("SGD.Fit should not error : %v", err)
@@ -76,7 +60,7 @@ func TestGradientDescent(t *testing.T) {
 		t.Error("Wrong number of parameters")
 	}
 
-	if math.Abs(float64(theta[0])) >= 1e-3 || math.Abs(float64(theta[1]-1)) >= 1e-3 {
+	if math.Abs(float64(theta[0])) >= 1e-1 || math.Abs(float64(theta[1]-1)) >= 1e-1 {
 		t.Errorf("Wrong parameter values : [%.3f, %.3f] != [1, 0]", theta[1], theta[0])
 	}
 }

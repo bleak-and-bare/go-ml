@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
 	"github.com/bleak-and-bare/machine_learning/processing"
@@ -29,13 +30,18 @@ func main() {
 
 	train, _ := ds.Extract(0.0, 0.75)
 	test, _ := ds.Extract(0.75, 1.0)
+	sample := []float32{8, 60, 0, 4, 7}
 
 	var std_scaler processing.StandardScaler[float32]
 	col_names := train.GetColumnNames()
-	for _, col := range col_names {
+	for i, col := range col_names {
 		if col != "Extracurricular Activities" {
 			std_scaler.FitTransformDataSet(train, col)
 			std_scaler.TransformDataSet(test, col)
+
+			if i < len(sample) {
+				sample[i] = std_scaler.TransformOne(sample[i])
+			}
 		}
 	}
 	test.Head(5)
@@ -45,6 +51,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "m.Fit errored : %v", err)
 		return
 	}
+
+	pred, _ := m.Predict(sample)
+	sample = append(sample, pred)
+	sample = std_scaler.InverseTransform(slices.Values(sample))
+	fmt.Printf("sample test : %v\n", sample[len(sample)-1])
 
 	r := m.PredictOn(train)
 	fmt.Printf("---------------------------------- Train set\n")

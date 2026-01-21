@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/bleak-and-bare/machine_learning/internal/iterable"
-	"github.com/bleak-and-bare/machine_learning/internal/maths"
+	"github.com/bleak-and-bare/machine_learning/internal/maths/stat"
 	"golang.org/x/exp/constraints"
 )
 
@@ -40,13 +40,15 @@ func NewDataSet[T constraints.Float](trg_col_idx uint32) DataSet[T] {
 	return ds
 }
 
-// This method duplicate every underlying data containers
+// Create a deep copy of dataset
 func (ds *DataSet[T]) Copy() DataSet[T] {
-	copy := *ds
-	copy.headers = slices.Clone(ds.headers)
-	copy.real_feat_indices = slices.Clone(ds.real_feat_indices)
-	copy.datas = slices.Clone(ds.datas)
-	return copy
+	return DataSet[T]{
+		min_range:         0.0,
+		max_range:         1.0,
+		headers:           slices.Clone(ds.headers),
+		real_feat_indices: slices.Clone(ds.real_feat_indices),
+		datas:             slices.Clone(ds.datas[max(0, ds.min_bound()):min(len(ds.datas), ds.max_bound())]),
+	}
 }
 
 // This method can be applied on dropped column
@@ -204,6 +206,31 @@ func (ds *DataSet[T]) Extract(min_range float32, max_range float32) (*DataSet[T]
 	new_ds.max_range = min(1.0, ds.min_range+ds_range*max_range)
 
 	return &new_ds, nil
+}
+
+func (ds *DataSet[T]) KFoldSplitNoShuffle(split int) []*DataSet[T] {
+	return ds.KFoldSplit(split, false)
+}
+
+func (ds *DataSet[T]) KFoldSplit(split int, shuffle bool) []*DataSet[T] {
+	if split <= 0 {
+		return nil
+	}
+
+	folds := make([]*DataSet[T], split)
+	if shuffle {
+		ds.Shuffle()
+	}
+
+	for i := range split {
+		f, err := ds.Extract(float32(i)/float32(split), float32(i+1)/float32(split))
+		if err != nil {
+			return nil
+		}
+		folds[i] = f
+	}
+
+	return folds
 }
 
 // returns real samples count
@@ -403,13 +430,13 @@ func (ds *DataSet[T]) real_trg_col() iter.Seq[T] {
 // Compute mean of the target column.
 // This method will skip any non-real cells
 func (ds *DataSet[T]) TargetMean() T {
-	return maths.Mean(ds.real_trg_col())
+	return stat.Mean(ds.real_trg_col())
 }
 
 // Compute variance of the target column.
 // This method will skip any non-real cells
 func (ds *DataSet[T]) TargetVariance() float64 {
-	return float64(maths.Variance(ds.real_trg_col()))
+	return float64(stat.Variance(ds.real_trg_col()))
 }
 
 func (ds *DataSet[T]) Shuffle() *DataSet[T] {

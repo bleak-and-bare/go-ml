@@ -22,6 +22,10 @@ func main() {
 
 	std_scaler := processing.StandardScaler[float32]{}
 	for _, col := range train.GetColumnNames() {
+		if col != "Salary" {
+			continue
+		}
+
 		std_scaler.FitTransformDataSet(train, col)
 		std_scaler.TransformDataSet(test, col)
 	}

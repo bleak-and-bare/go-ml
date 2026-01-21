@@ -6,7 +6,7 @@ import (
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
 	"github.com/bleak-and-bare/machine_learning/internal/iterable"
 	"github.com/bleak-and-bare/machine_learning/internal/iterable/adapter"
-	"github.com/bleak-and-bare/machine_learning/internal/maths"
+	"github.com/bleak-and-bare/machine_learning/internal/maths/stat"
 	"golang.org/x/exp/constraints"
 )
 
@@ -16,33 +16,36 @@ type StandardScaler[T constraints.Float] struct {
 }
 
 func (s *StandardScaler[T]) Fit(it iter.Seq[T]) {
-	s.mean = maths.Mean(it)
-	s.stdev = maths.Stdev(it)
+	s.mean = stat.Mean(it)
+	s.stdev = stat.Stdev(it)
 }
 
-func (s *StandardScaler[T]) InverseTransform(pred []T) []T {
-	real := make([]T, len(pred))
-	for i := range pred {
-		real[i] = s.stdev*pred[i] + s.mean
+func (s *StandardScaler[T]) InverseTransform(sample iter.Seq[T]) []T {
+	real := make([]T, 0, 1)
+	for i := range sample {
+		real = append(real, s.stdev*i+s.mean)
 	}
 	return real
 }
 
 func (s *StandardScaler[T]) Transform(it iter.Seq[*T]) {
-	stdev := T(1.0)
-	if s.stdev > 0.0 {
-		stdev = s.stdev
-	}
-
 	for p := range it {
 		if p != nil {
-			*p = (*p - s.mean) / stdev
+			*p = s.TransformOne(*p)
 		}
 	}
 }
 
+func (s *StandardScaler[T]) TransformOne(v T) T {
+	stdev := T(1.0)
+	if s.stdev > 0.0 {
+		stdev = s.stdev
+	}
+	return (v - s.mean) / stdev
+}
+
 func (s *StandardScaler[T]) FitTransform(it iter.Seq[*T]) {
-	s.Fit(adapter.PtrDerefAdapter(it))
+	s.Fit(adapter.PtrDeref(it))
 	s.Transform(it)
 }
 
