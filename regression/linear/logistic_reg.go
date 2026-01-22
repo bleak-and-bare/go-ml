@@ -3,6 +3,7 @@ package linear
 import (
 	"fmt"
 	"math"
+	"slices"
 
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
 	"github.com/bleak-and-bare/machine_learning/internal/iterable"
@@ -10,14 +11,16 @@ import (
 	"github.com/bleak-and-bare/machine_learning/internal/maths"
 	"github.com/bleak-and-bare/machine_learning/internal/maths/regularization"
 	"github.com/bleak-and-bare/machine_learning/internal/maths/utils"
+	"github.com/bleak-and-bare/machine_learning/internal/maths/vector"
 	"golang.org/x/exp/constraints"
 )
 
 type LogisticRegression[T constraints.Float] struct {
-	theta        []T     // parameter list
+	BaseModel[T]
 	Alpha        float32 // learning rate
 	Penalty      regularization.RegularizationType
 	Threshold    maths.Threshold
+	scaffolded   bool
 	hyper_params *struct { // regularization parameters
 		alpha  float64 // L1-ratio
 		lambda float64 // regularization strength
@@ -32,7 +35,19 @@ func NewLogisticReg[T constraints.Float]() LogisticRegression[T] {
 	}
 }
 
-func logreg_hypothesis[T constraints.Float](theta []T, sample dataset.DataSample[T]) (T, error) {
+func (m *LogisticRegression[T]) Predict(x []T) (T, error) {
+	return m.BaseModel.Predict(x, logreg_hypothesis)
+}
+
+func (m *LogisticRegression[T]) PredictOn(ds *dataset.DataSet[T]) []T {
+	return m.BaseModel.PredictOn(ds, logreg_hypothesis)
+}
+
+func logreg_hypothesis[T constraints.Float](theta []T, x []T) T {
+	return T(utils.Sigmoid(float64(vector.DotProduct(slices.Values(theta), iterable.Prepend(slices.Values(x), 1.0)))))
+}
+
+func logreg_hypothesis_sample[T constraints.Float](theta []T, sample dataset.DataSample[T]) (T, error) {
 	d, err := sample.DotProduct(theta[1:])
 	if err != nil {
 		return 0.0, err
@@ -54,7 +69,7 @@ func scaled_negative_log_likelihood[T constraints.Float](theta []T, ds *dataset.
 			return 0.0
 		}
 
-		h, err := logreg_hypothesis(theta, sample)
+		h, err := logreg_hypothesis_sample(theta, sample)
 		if err != nil {
 			caught_err = err
 			return 0.0

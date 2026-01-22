@@ -426,6 +426,10 @@ func (ds *DataSet[T]) Samples() iter.Seq[DataSample[T]] {
 	}
 }
 
+func (ds *DataSet[T]) CollectTargets() []T {
+	return slices.Collect(ds.real_trg_col())
+}
+
 func (ds *DataSet[T]) real_trg_col() iter.Seq[T] {
 	return iterable.Map(iterable.Filter(ds.TargetColumn(), func(c DataCell) bool {
 		return c != nil && c.IsReal()

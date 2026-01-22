@@ -1,6 +1,7 @@
 package selector
 
 import (
+	"fmt"
 	"math"
 	"slices"
 
@@ -37,6 +38,7 @@ func (g *GridSearch[T]) Fit(ds *dataset.DataSet[T]) error {
 	var best_params []float64
 
 	for _, comb := range combinations {
+		fmt.Printf("comb: %v\n", comb)
 		i := 0
 		cv_losses := make([]T, g.kfold)
 

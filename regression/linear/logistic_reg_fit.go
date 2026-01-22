@@ -14,9 +14,10 @@ import (
 )
 
 func (m *LogisticRegression[T]) Fit(ds *dataset.DataSet[T]) error {
-	if m.hyper_params != nil {
+	if m.hyper_params != nil || m.Penalty == regularization.None {
 		sgd := optimization.NewSGD[T](m.Threshold)
 		sgd.Alpha = m.Alpha
+		sgd.EnableLog = !m.scaffolded
 		sgd.Cost = &logreg_loss[T]{
 			Regularizator: m.create_regularizator(),
 		}
@@ -30,6 +31,15 @@ func (m *LogisticRegression[T]) Fit(ds *dataset.DataSet[T]) error {
 	}
 
 	param_choices := regularization.ElasticnetDefGrid()
+	switch m.Penalty {
+	case regularization.Lasso:
+		param_choices.Alpha = []float64{1.0}
+		break
+	case regularization.Ridge:
+		param_choices.Alpha = []float64{0.0}
+		break
+	}
+
 	gs := selector.NewGridSearch([][]float64{param_choices.Alpha, param_choices.Lambda}, logreg_factory(*m))
 	if err := gs.Fit(ds); err != nil {
 		return err
@@ -80,7 +90,7 @@ func (l *logreg_loss[T]) Diff(j int, params []T, ds *dataset.DataSet[T]) (T, err
 	}
 
 	var caught_err error
-	dl := accumulator.Sum(iterable.Map(ds.Samples(), func(sample dataset.DataSample[T]) T {
+	dl := accumulator.Mean(iterable.Map(ds.Samples(), func(sample dataset.DataSample[T]) T {
 		if caught_err != nil {
 			return 0.0
 		}
@@ -91,7 +101,7 @@ func (l *logreg_loss[T]) Diff(j int, params []T, ds *dataset.DataSet[T]) (T, err
 			return 0.0
 		}
 
-		h, err := logreg_hypothesis(params, sample)
+		h, err := logreg_hypothesis_sample(params, sample)
 		if err != nil {
 			caught_err = err
 			return 0.0
@@ -101,7 +111,13 @@ func (l *logreg_loss[T]) Diff(j int, params []T, ds *dataset.DataSet[T]) (T, err
 			return h - *y
 		}
 
-		return *sample.GetFeat(j - 1) * (h - *y)
+		var x T
+		if j == 0 {
+			x = 1.0
+		} else {
+			x = *sample.GetFeat(j - 1)
+		}
+		return x * (h - *y)
 	}))
 
 	if caught_err != nil {
@@ -133,6 +149,7 @@ func logreg_factory[T constraints.Float](blueprint LogisticRegression[T]) select
 	return func(hyper_params []float64) selector.Model[T] {
 		m := blueprint
 		m.theta = nil
+		m.scaffolded = true
 		m.hyper_params = &struct {
 			alpha  float64
 			lambda float64

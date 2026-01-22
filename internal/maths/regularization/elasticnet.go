@@ -42,7 +42,7 @@ func NewRidge[T constraints.Float](lambda float64) Elasticnet[T] {
 }
 
 func (e *Elasticnet[T]) On(params []T, _ *dataset.DataSet[T]) (T, error) {
-	return T(e.Lambda) * (T(e.Alpha)*maths.L1Norm(slices.Values(params)) + T(0.5*(1-e.Alpha))*maths.L2Norm(slices.Values(params))), nil
+	return T(e.Lambda) * (T(e.Alpha)*maths.L1Norm(slices.Values(params[1:])) + T(0.5*(1-e.Alpha))*maths.L2Norm(slices.Values(params[1:]))), nil
 }
 
 func (e *Elasticnet[T]) Diff(j int, params []T, _ *dataset.DataSet[T]) (T, error) {
@@ -50,5 +50,5 @@ func (e *Elasticnet[T]) Diff(j int, params []T, _ *dataset.DataSet[T]) (T, error
 		return 0.0, nil
 	}
 
-	return T(2*e.Lambda*(1-e.Alpha))*params[j] + T(e.Lambda*e.Alpha*float64(utils.Sign(params[j]))), nil
+	return T(e.Lambda*(1-e.Alpha))*params[j] + T(e.Lambda*e.Alpha*float64(utils.Sign(params[j]))), nil
 }

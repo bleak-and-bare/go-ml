@@ -3,8 +3,8 @@ package regularization
 type RegularizationType int
 
 const (
-	ElasticNet RegularizationType = iota
+	None RegularizationType = iota
 	Lasso
 	Ridge
-	None
+	ElasticNet
 )
