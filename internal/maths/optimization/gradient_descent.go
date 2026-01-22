@@ -20,6 +20,7 @@ type GradientDescent[T constraints.Float] struct {
 	Alpha     float32 // learning rate
 	Threshold maths.Threshold
 	Cost      maths.BatchFunction[T]
+	EnableLog bool
 }
 
 // Stochastic Gradient Descent
@@ -27,13 +28,13 @@ type SGD[T constraints.Float] struct {
 	GradientDescent[T]
 }
 
-// Initialize SGD with MSE as cost function
 func NewSGD[T constraints.Float](t maths.Threshold) GradientDescent[T] {
 	return GradientDescent[T]{
 		theta:     nil,
 		BatchSize: 128,
 		Alpha:     1e-4,
 		Threshold: t,
+		EnableLog: true,
 	}
 }
 
@@ -142,7 +143,9 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 		if epoch >= g.Threshold.MinEphocs {
 			grad_norm := g.gradient_norm(ds)
 			if grad_norm <= T(g.Threshold.GradEps) {
-				fmt.Printf("Hitting gradient breakpoint. Total epochs : %d\n", epoch+1)
+				if g.EnableLog {
+					fmt.Printf("Hitting gradient breakpoint. Total epochs : %d\n", epoch+1)
+				}
 				break
 			}
 
@@ -155,7 +158,9 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 			prev_cost = cost
 
 			if rel_cost <= float64(g.Threshold.CostEps) {
-				fmt.Printf("Hitting cost breakpoint. Total epochs : %d\n", epoch+1)
+				if g.EnableLog {
+					fmt.Printf("Hitting cost breakpoint. Total epochs : %d\n", epoch+1)
+				}
 				break
 			}
 		}

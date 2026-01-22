@@ -14,6 +14,34 @@ type MSE[T constraints.Float] struct {
 	Hypothesis SampleFunction[T]
 }
 
+/*
+Mean squared error
+Parameters :
+- h : hypothesis function
+- placeholder : default value for invalid cells found in the dataset (does not matter if dataset have no holes)
+*/
+func (mse *MSE[T]) On(params []T, ds *dataset.DataSet[T]) (T, error) {
+	var caught_err error
+	m := accumulator.Mean(adapter.Squared(iterable.Map(ds.Samples(), func(ds dataset.DataSample[T]) T {
+		if caught_err != nil {
+			return 0.0
+		}
+
+		h, err := mse.Hypothesis.On(params, &ds)
+		if err != nil {
+			caught_err = err
+			return 0.0
+		}
+		return h - *ds.GetTarget()
+	})))
+
+	if caught_err != nil {
+		return 0.0, caught_err
+	}
+
+	return m, nil
+}
+
 func (mse *MSE[T]) Diff(j int, params []T, ds *dataset.DataSet[T]) (T, error) {
 	sample_size := ds.Size()
 
@@ -48,32 +76,4 @@ func (mse *MSE[T]) Diff(j int, params []T, ds *dataset.DataSet[T]) (T, error) {
 	}
 
 	return T(2/float32(sample_size)) * sum, nil
-}
-
-/*
-Mean squared error
-Parameters :
-- h : hypothesis function
-- placeholder : default value for invalid cells found in the dataset (does not matter if dataset have no holes)
-*/
-func (mse *MSE[T]) On(params []T, ds *dataset.DataSet[T]) (T, error) {
-	var caught_err error
-	m := accumulator.Mean(adapter.Squared(iterable.Map(ds.Samples(), func(ds dataset.DataSample[T]) T {
-		if caught_err != nil {
-			return 0.0
-		}
-
-		h, err := mse.Hypothesis.On(params, &ds)
-		if err != nil {
-			caught_err = err
-			return 0.0
-		}
-		return h - *ds.GetTarget()
-	})))
-
-	if caught_err != nil {
-		return 0.0, caught_err
-	}
-
-	return m, nil
 }

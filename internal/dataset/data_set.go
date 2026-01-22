@@ -208,29 +208,37 @@ func (ds *DataSet[T]) Extract(min_range float32, max_range float32) (*DataSet[T]
 	return &new_ds, nil
 }
 
-func (ds *DataSet[T]) KFoldSplitNoShuffle(split int) []*DataSet[T] {
-	return ds.KFoldSplit(split, false)
+type Fold[T constraints.Float] struct {
+	Test  *DataSet[T]
+	Train *DataSet[T]
 }
 
-func (ds *DataSet[T]) KFoldSplit(split int, shuffle bool) []*DataSet[T] {
+func (ds *DataSet[T]) KFoldSplit(split int) iter.Seq[Fold[T]] {
 	if split <= 0 {
 		return nil
 	}
 
-	folds := make([]*DataSet[T], split)
-	if shuffle {
-		ds.Shuffle()
-	}
+	return func(yield func(Fold[T]) bool) {
+		for range split {
+			ds.Shuffle()
+			test, err := ds.Extract(0.0, 1/float32(split))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "DataSet.KFoldSplit : %v", err)
+				return
+			}
 
-	for i := range split {
-		f, err := ds.Extract(float32(i)/float32(split), float32(i+1)/float32(split))
-		if err != nil {
-			return nil
+			train, err := ds.Extract(1/float32(split), 1.0)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "DataSet.KFoldSplit : %v", err)
+				return
+			}
+
+			if !yield(Fold[T]{test, train}) {
+				return
+			}
 		}
-		folds[i] = f
 	}
 
-	return folds
 }
 
 // returns real samples count
