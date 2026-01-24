@@ -5,7 +5,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type ModelFactory[T constraints.Float] func(hyper_params []float64) Model[T]
+type ModelFactory[T constraints.Float] func(hyper_params map[string]float64) Model[T]
 
 type Model[T constraints.Float] interface {
 	Fit(*dataset.DataSet[T]) error

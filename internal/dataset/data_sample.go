@@ -2,6 +2,7 @@ package dataset
 
 import (
 	"fmt"
+	"math"
 
 	"golang.org/x/exp/constraints"
 )
@@ -20,6 +21,10 @@ func (s *DataSample[T]) DotProduct(v []T) (T, error) {
 			return 0.0, fmt.Errorf("DataSample.DotProduct : dataset has empty cell <row: %d, feat: %d>", s.row, i)
 		}
 		sum += *f * v[i]
+	}
+
+	if math.IsNaN(float64(sum)) || math.IsInf(float64(sum), 0) {
+		return 0.0, fmt.Errorf("DataSample.DotProduct : caught NaN or Inf value. Vector : %v", v)
 	}
 
 	return sum, nil

@@ -9,35 +9,43 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// Elasticnet implements BatchFunction interface
-type Elasticnet[T constraints.Float] struct {
+type ElasticnetParams struct {
 	Lambda float64 // Regularization strength
 	Alpha  float64 // L1/Lasso ratio
 }
 
-type HyperParamsGrid struct {
+// Elasticnet implements BatchFunction interface
+type Elasticnet[T constraints.Float] struct {
+	ElasticnetParams
+}
+
+type ElasticnetParamsGrid struct {
 	Alpha  []float64
 	Lambda []float64
 }
 
-func ElasticnetDefGrid() HyperParamsGrid {
-	return HyperParamsGrid{
-		Alpha:  []float64{0.1, 0.3, 0.5, 0.7, 0.9},
-		Lambda: utils.Logspace(-4, 2, 7),
+func ElasticnetDefGrid() ElasticnetParamsGrid {
+	return ElasticnetParamsGrid{
+		Alpha:  utils.Linspace(0.1, 0.9, 3),
+		Lambda: utils.Logspace(-2, 2, 5),
+	}
+}
+
+func NewElasticnet[T constraints.Float](lambda float64, alpha float64) Elasticnet[T] {
+	return Elasticnet[T]{
+		ElasticnetParams{lambda, alpha},
 	}
 }
 
 func NewLasso[T constraints.Float](lambda float64) Elasticnet[T] {
 	return Elasticnet[T]{
-		Lambda: lambda,
-		Alpha:  1.0,
+		ElasticnetParams{lambda, 1.0},
 	}
 }
 
 func NewRidge[T constraints.Float](lambda float64) Elasticnet[T] {
 	return Elasticnet[T]{
-		Lambda: 2 * lambda,
-		Alpha:  0.0,
+		ElasticnetParams{lambda, 0.0},
 	}
 }
 

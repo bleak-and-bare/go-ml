@@ -1,6 +1,7 @@
 package optimization
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -49,7 +50,7 @@ func (g *GradientDescent[T]) initialize_parameters(ds *dataset.DataSet[T]) {
 
 func (g *GradientDescent[T]) gradient_norm(ds *dataset.DataSet[T]) T {
 	grad := make([]T, len(g.theta))
-	num_workers := min(runtime.NumCPU(), len(g.theta))
+	num_workers := min(runtime.GOMAXPROCS(0), len(g.theta))
 
 	var wg sync.WaitGroup
 	jobs := make(chan int, len(g.theta))
@@ -102,38 +103,76 @@ func (g *GradientDescent[T]) process(ds *dataset.DataSet[T]) error {
 		}
 
 		for _, batch := range batches {
-			var wg sync.WaitGroup
-			num_workers := min(runtime.NumCPU(), len(g.theta))
+			ctx, cancel := context.WithCancel(context.Background())
 
-			jobs := make(chan int, len(g.theta))
-			err_ch := make(chan error, len(g.theta))
+			var wg sync.WaitGroup
+			num_workers := min(runtime.GOMAXPROCS(0), len(g.theta))
+
+			jobs := make(chan int)
+			err_ch := make(chan error, 1)
 
 			for range num_workers {
 				wg.Go(func() {
-					for j := range jobs {
-						c, err := g.Cost.Diff(j, g.theta, batch)
-						if err != nil {
-							err_ch <- err
+					for {
+						select {
+						case <-ctx.Done():
 							return
-						}
+						case j, ok := <-jobs:
+							if !ok {
+								return
+							}
 
-						n_theta[j] = g.theta[j] - T(g.Alpha)*c
-						if math.IsNaN(float64(n_theta[j])) || math.IsInf(float64(n_theta[j]), 0) {
-							panic("WTF ?")
+							c, err := g.Cost.Diff(j, g.theta, batch)
+							if err != nil {
+								select {
+								case err_ch <- err:
+								default:
+								}
+
+								cancel()
+								return
+							}
+
+							t := g.theta[j] - T(g.Alpha)*c
+							if math.IsNaN(float64(t)) || math.IsInf(float64(t), 0) {
+								select {
+								case err_ch <- fmt.Errorf("Invalid parameter update: encountered NaN/Inf at %d", j):
+								default:
+								}
+
+								cancel()
+								return
+							}
+
+							n_theta[j] = t
 						}
 					}
 				})
 			}
 
-			for i := range g.theta {
-				jobs <- i
-			}
-			close(jobs)
+			go func() {
+				defer close(jobs)
+
+				for i := range g.theta {
+					select {
+					case <-ctx.Done():
+						return
+					case jobs <- i:
+					}
+				}
+			}()
 
 			wg.Wait()
-			close(err_ch)
+			cancel()
 
-			for err := range err_ch {
+			if err := func() error {
+				select {
+				case err := <-err_ch:
+					return err
+				default:
+					return nil
+				}
+			}(); err != nil {
 				return err
 			}
 

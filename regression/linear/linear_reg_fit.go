@@ -2,6 +2,7 @@ package linear
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
 	"github.com/bleak-and-bare/machine_learning/internal/maths"
@@ -34,6 +35,12 @@ func (h *linear_reg_hypo[T]) Diff(j int, params []T, sample *dataset.DataSample[
 }
 
 func (m *LinearRegression[T]) Fit(ds *dataset.DataSet[T]) error {
+	start := time.Now()
+	defer func() {
+		elapsed := time.Since(start)
+		fmt.Printf("LinearRegression fit took %v\n", elapsed)
+	}()
+
 	sgd := optimization.NewSGD[T](m.Threshold)
 	sgd.Alpha = m.Alpha
 	sgd.Cost = &maths.MSE[T]{

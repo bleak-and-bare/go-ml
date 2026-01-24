@@ -1,6 +1,13 @@
 package classification
 
-import "fmt"
+// https://en.wikipedia.org/wiki/Precision_and_recall
+
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/bleak-and-bare/machine_learning/internal/misc"
+)
 
 type ClassMetrics struct {
 	Precision float64 // prediction correctness
@@ -23,16 +30,45 @@ func ComputeReport(trg, pred []int) ClassificationReport {
 	counts := computeCounts(trg, pred)
 	report := computeMetrics(counts)
 
-	fmt.Printf("%-10s %-9s %-9s %-9s %-9s\n",
-		"class", "precision", "recall", "f1-score", "support")
-
-	for label, m := range report.PerClass {
-		fmt.Printf("%-10d %-9.2f %-9.2f %-9.2f %-9d\n",
-			label, m.Precision, m.Recall, m.F1, m.Support)
+	grid := misc.GridPrinter{
+		Tab: "  ",
+	}
+	headers := []string{"class", "precision", "recall", "f1-score", "support"}
+	for _, h := range headers {
+		grid.Column(h)
 	}
 
-	fmt.Println("macro avg", report.MacroAvg)
-	fmt.Println("weighted avg", report.WeightedAvg)
+	for label, m := range report.PerClass {
+		grid.NewRow()
+		grid.Columns(
+			strconv.Itoa(label),
+			fmt.Sprintf("%.3f", m.Precision),
+
+			fmt.Sprintf("%.3f", m.Recall),
+			fmt.Sprintf("%.3f", m.F1),
+			strconv.Itoa(m.Support),
+		)
+	}
+
+	grid.NewEmptyRow()
+	grid.NewRow()
+	grid.Column("macro avg")
+	grid.Columns(
+		fmt.Sprintf("%.3f", report.MacroAvg.Precision),
+		fmt.Sprintf("%.3f", report.MacroAvg.Recall),
+		fmt.Sprintf("%.3f", report.MacroAvg.F1),
+		strconv.Itoa(report.MacroAvg.Support),
+	)
+
+	grid.NewRow()
+	grid.Column("weighted avg")
+	grid.Columns(
+		fmt.Sprintf("%.3f", report.WeightedAvg.Precision),
+		fmt.Sprintf("%.3f", report.WeightedAvg.Recall),
+		fmt.Sprintf("%.3f", report.WeightedAvg.F1),
+		strconv.Itoa(report.WeightedAvg.Support),
+	)
+	grid.Print(true)
 
 	return report
 }

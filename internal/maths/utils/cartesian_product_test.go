@@ -1,9 +1,27 @@
 package utils
 
 import (
+	"maps"
 	"slices"
 	"testing"
 )
+
+func TestCartesianProductM(t *testing.T) {
+	comb := CartesianProductM(map[string][]string{
+		"first":  {"a1", "a2"},
+		"second": {"b1", "b2"},
+	})
+	expected := []map[string]string{
+		{"first": "a1", "second": "b1"},
+		{"first": "a1", "second": "b2"},
+		{"first": "a2", "second": "b1"},
+		{"first": "a2", "second": "b2"},
+	}
+
+	if !slices.EqualFunc(comb, expected, func(m1, m2 map[string]string) bool { return maps.Equal(m1, m2) }) {
+		t.Errorf("Wrong combinations. Expected : %v. Got : %v", expected, comb)
+	}
+}
 
 func TestCartesianProduct_OneVector(t *testing.T) {
 	comb := CartesianProduct([][]string{{"a", "b"}})

@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 
 	"github.com/bleak-and-bare/machine_learning/classification"
 	"github.com/bleak-and-bare/machine_learning/internal/dataset"
+	"github.com/bleak-and-bare/machine_learning/internal/iterable/accumulator"
 	"github.com/bleak-and-bare/machine_learning/internal/maths/regularization"
+	"github.com/bleak-and-bare/machine_learning/internal/maths/utils"
+	"github.com/bleak-and-bare/machine_learning/internal/misc"
+	"github.com/bleak-and-bare/machine_learning/internal/selector"
 	"github.com/bleak-and-bare/machine_learning/processing"
 	"github.com/bleak-and-bare/machine_learning/regression/linear"
 )
@@ -27,8 +32,11 @@ func main() {
 
 		return &dataset.RealDataCell[float32]{Value: 0.0}
 	})
-
 	ds.Shuffle()
+
+	// chunk, _ := ds.Extract(0.0, 0.125)
+	// ds = *chunk
+
 	train, _ := ds.Extract(0.0, 0.75)
 	test, _ := ds.Extract(0.75, 1.0)
 
@@ -41,17 +49,44 @@ func main() {
 		}
 	}
 
+	train.Head(5)
+
 	m := linear.NewLogisticReg[float32]()
-	m.Penalty = regularization.None
+	m.Penalty = regularization.Ridge
+
+	gs := selector.NewGridSearch(map[string][]float64{
+		"lambda": utils.Logspace(-4, -2, 5),
+	}, linear.LogRegFactory(m, func(m map[string]float64) regularization.ElasticnetParams {
+		return regularization.ElasticnetParams{
+			Lambda: m["lambda"],
+		}
+	}))
+
+	if err := gs.Fit(train); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to search hyper params : %v", err)
+		return
+	}
+
+	best_params := gs.BestParams()
+	m.SetHyperParams(0.0, best_params["lambda"])
+
 	if err := m.Fit(train); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to train model : %v", err)
 		return
 	}
 
-	// fmt.Printf("m.GetParams(): %v\n", m.GetParams())
-
 	t := test.CollectTargets()
 	r := m.PredictOn(test)
+
+	var gp misc.GridPrinter
+	gp.Columns("Min", "Max", "Mean")
+	gp.NewRow()
+	gp.Columns(
+		fmt.Sprintf("%.3f", slices.Min(r)),
+		fmt.Sprintf("%.3f", slices.Max(r)),
+		fmt.Sprintf("%.3f", accumulator.Mean(slices.Values(r))),
+	)
+	gp.Print(true)
 
 	trg := make([]int, len(t))
 	pred := make([]int, len(r))

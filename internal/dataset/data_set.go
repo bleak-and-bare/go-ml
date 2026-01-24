@@ -11,10 +11,10 @@ import (
 	"os"
 	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/bleak-and-bare/machine_learning/internal/iterable"
 	"github.com/bleak-and-bare/machine_learning/internal/maths/stat"
+	"github.com/bleak-and-bare/machine_learning/internal/misc"
 	"golang.org/x/exp/constraints"
 )
 
@@ -40,7 +40,7 @@ func NewDataSet[T constraints.Float](trg_col_idx uint32) DataSet[T] {
 	return ds
 }
 
-// Create a deep copy of dataset
+// Create a deep copy of this dataset
 func (ds *DataSet[T]) Copy() DataSet[T] {
 	return DataSet[T]{
 		min_range:         0.0,
@@ -213,7 +213,7 @@ type Fold[T constraints.Float] struct {
 	Train *DataSet[T]
 }
 
-func (ds *DataSet[T]) KFoldSplit(split int) iter.Seq[Fold[T]] {
+func (ds *DataSet[T]) HoldOutSplit(split int) iter.Seq[Fold[T]] {
 	if split <= 0 {
 		return nil
 	}
@@ -269,78 +269,35 @@ func (ds *DataSet[T]) Head(max uint32) {
 		return
 	}
 
-	const tab = "  "
+	p := misc.GridPrinter{
+		Tab: "  ",
+	}
+
+	for _, h := range ds.headers {
+		if h.used {
+			p.Column(h.name)
+		}
+	}
+
 	max_bound := ds.max_bound()
-	visited := make([]bool, len(ds.headers))
-	max_lengths := make([]int, len(ds.headers))
-
-	for i, h := range ds.headers {
-		if !h.used {
-			continue
-		}
-
-		if !visited[i] {
-			visited[i] = true
-			max_lengths[i] = len(h.name)
-		} else if max_lengths[i] < len(h.name) {
-			max_lengths[i] = len(h.name)
-		}
-	}
-
-	for i := ds.min_bound(); i < max_bound; i++ {
-		for j := range ds.headers {
-			if !ds.headers[j].used {
-				continue
-			}
-
-			col := ds.at(i, j)
-			switch c := col.(type) {
-			case *RealDataCell[T]:
-				s := fmt.Sprintf("%.3f", c.Value)
-				l := len(s)
-				if l > max_lengths[j] {
-					max_lengths[j] = l
-				}
-			case *StrDataCell:
-				l := len(c.Value)
-				if l > max_lengths[j] {
-					max_lengths[j] = l
-				}
-			}
-		}
-	}
-
-	var line_sep strings.Builder
-	for i, h := range ds.headers {
-		if !h.used {
-			continue
-		}
-
-		line_sep.WriteString(strings.Repeat("-", max_lengths[i]+len(tab)+2))
-		fmt.Printf("%v%v%v| ", h.name, strings.Repeat(" ", max_lengths[i]-len(h.name)), tab)
-	}
-	fmt.Printf("\n%v\n", line_sep.String())
-
 	for i := ds.min_bound(); i < max_bound && max > 0; i, max = i+1, max-1 {
-		for j := range ds.headers {
-			if j >= len(ds.headers) || !ds.headers[j].used {
+		p.NewRow()
+		for j, h := range ds.headers {
+			if !h.used {
 				continue
 			}
 
 			col := ds.at(i, j)
-			str := ""
-
 			switch c := col.(type) {
 			case *RealDataCell[T]:
-				str = fmt.Sprintf("%.3f", c.Value)
+				p.Column(fmt.Sprintf("%.3f", c.Value))
 			case *StrDataCell:
-				str = c.Value
+				p.Column(c.Value)
 			}
-
-			fmt.Printf("%v%v%v| ", str, strings.Repeat(" ", max_lengths[j]-len(str)), tab)
 		}
-		fmt.Println("")
 	}
+
+	p.Print(true)
 }
 
 func (ds *DataSet[T]) Dump() {

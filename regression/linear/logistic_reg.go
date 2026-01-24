@@ -17,22 +17,28 @@ import (
 
 type LogisticRegression[T constraints.Float] struct {
 	BaseModel[T]
-	Alpha        float32 // learning rate
-	Penalty      regularization.RegularizationType
-	Threshold    maths.Threshold
-	scaffolded   bool
-	hyper_params *struct { // regularization parameters
-		alpha  float64 // L1-ratio
-		lambda float64 // regularization strength
-	}
+	scaffolded  bool
+	Alpha       float32 // learning rate
+	Penalty     regularization.RegularizationType
+	Threshold   maths.Threshold
+	HyperParams *regularization.ElasticnetParams
 }
 
 func NewLogisticReg[T constraints.Float]() LogisticRegression[T] {
 	return LogisticRegression[T]{
 		Alpha:     1e-4,
 		Threshold: maths.DefThreshold(),
-		Penalty:   regularization.Ridge,
+		Penalty:   regularization.None,
 	}
+}
+
+func (m *LogisticRegression[T]) SetHyperParams(alpha, lambda float64) {
+	if m.HyperParams == nil {
+		m.HyperParams = &regularization.ElasticnetParams{}
+	}
+
+	m.HyperParams.Alpha = alpha
+	m.HyperParams.Lambda = lambda
 }
 
 func (m *LogisticRegression[T]) Predict(x []T) (T, error) {
@@ -52,7 +58,9 @@ func logreg_hypothesis_sample[T constraints.Float](theta []T, sample dataset.Dat
 	if err != nil {
 		return 0.0, err
 	}
-	return T(utils.Sigmoid(float64(theta[0] + d))), nil
+
+	h := T(utils.Sigmoid(float64(theta[0] + d)))
+	return h, nil
 }
 
 func scaled_negative_log_likelihood[T constraints.Float](theta []T, ds *dataset.DataSet[T]) (T, error) {
@@ -65,21 +73,26 @@ func scaled_negative_log_likelihood[T constraints.Float](theta []T, ds *dataset.
 
 		y := sample.GetTarget()
 		if y == nil {
-			caught_err = fmt.Errorf("scaled_negative_log_likelihood : No target found for row : %v", sample.GetRow())
+			caught_err = fmt.Errorf("scaled_negative_log_likelihood : No target found for row %v", sample.GetRow())
 			return 0.0
 		}
 
-		h, err := logreg_hypothesis_sample(theta, sample)
+		d, err := sample.DotProduct(theta[1:])
 		if err != nil {
 			caught_err = err
 			return 0.0
 		}
 
-		return *y*T(math.Log(float64(h))) + (1-*y)*T(math.Log(float64(1-h)))
+		z := theta[0] + d
+		return T(math.Log(1+math.Exp(float64(z)))) - *y*z
 	}))
 
 	if caught_err != nil {
 		return 0.0, caught_err
+	}
+
+	if math.IsNaN(float64(s)) || math.IsInf(float64(s), 0) {
+		return 0.0, fmt.Errorf("scaled_negative_log_likelihood : caught NaN or Inf value. Parameters : %v\n", theta)
 	}
 
 	return s, nil

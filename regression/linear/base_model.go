@@ -12,11 +12,6 @@ type BaseModel[T constraints.Float] struct {
 	theta []T // parameter list
 }
 
-// TODO : to remove
-func (m *BaseModel[T]) GetParams() []T {
-	return m.theta
-}
-
 func (m *BaseModel[T]) PredictOn(ds *dataset.DataSet[T], hypothesis func(theta []T, x []T) T) []T {
 	r := regression.RegressionReport[T]{
 		DataSet: ds,
@@ -57,6 +52,5 @@ func (m *BaseModel[T]) Predict(x []T, hypothesis func(theta []T, x []T) T) (T, e
 		return 0.0, errors.New("Invalid vector provided")
 	}
 
-	// return vector.DotProduct(slices.Values(m.theta), iterable.Prepend(slices.Values(x), 1)), nil
 	return hypothesis(m.theta, x), nil
 }

@@ -11,15 +11,13 @@ type GridPrinter struct {
 	Tab             string
 }
 
-// func (g *GridPrinter) last_row() []string {
-// 	if len(g.grid) == 0 {
-// 		return g.NewRow().last_row()
-// 	}
-// 	return g.grid[len(g.grid)-1]
-// }
+func (g *GridPrinter) Clear() {
+	g.grid = nil
+	g.max_col_lengths = nil
+}
 
 func (g *GridPrinter) Print(show_header bool) {
-	fmt.Printf("\n%v\n", g.String(show_header))
+	fmt.Printf("%v\n", g.String(show_header))
 }
 
 func (g *GridPrinter) String(show_header bool) string {
@@ -34,15 +32,19 @@ func (g *GridPrinter) String(show_header bool) string {
 		sb.WriteRune('|')
 
 		if len(line) == 0 {
-			line = strings.Repeat("-", len(sb.String()))
+			line = strings.Repeat("─", len(sb.String())-2)
 			if show_header {
-				sb.WriteString("\n" + line)
+				sb.WriteString("\n├" + line + "┤")
 			}
 		}
 		sb.WriteRune('\n')
 	}
 
-	return fmt.Sprintf("%v%v%v", line, sb.String(), line)
+	return fmt.Sprintf("%v\n%v%v",
+		"┌"+line+"┐",
+		sb.String(),
+		"└"+line+"┘",
+	)
 }
 
 func (g *GridPrinter) NewRow() {
@@ -50,6 +52,24 @@ func (g *GridPrinter) NewRow() {
 		g.grid = append(g.grid, make([]string, 0, len(g.grid[len(g.grid)-1])))
 	} else {
 		g.grid = append(g.grid, make([]string, 0))
+	}
+}
+
+func (g *GridPrinter) NewEmptyRow() {
+	cols := 0
+	if len(g.grid) > 0 {
+		cols = len(g.grid[len(g.grid)-1])
+	}
+
+	g.NewRow()
+	for range cols {
+		g.Column("")
+	}
+}
+
+func (g *GridPrinter) Columns(cells ...string) {
+	for _, c := range cells {
+		g.Column(c)
 	}
 }
 
