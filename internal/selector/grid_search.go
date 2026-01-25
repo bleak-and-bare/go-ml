@@ -59,7 +59,17 @@ func (g *GridSearch[T]) grid_search_worker(ctx context.Context, jobs <-chan grid
 			i := 0
 			losses := make([]T, g.Fold)
 
-			for fold := range job.ds.HoldOutSplit(g.Fold) {
+			for r := range job.ds.HoldOutSplit(g.Fold) {
+				if r.Err != nil {
+					select {
+					case <-ctx.Done():
+						return
+					case results <- grid_search_result[T]{err: r.Err}:
+					}
+					return
+				}
+
+				fold := r.Value
 				m := g.model_factory(job.params)
 
 				if err := m.Fit(fold.Train); err != nil {

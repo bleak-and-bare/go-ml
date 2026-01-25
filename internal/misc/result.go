@@ -1,0 +1,6 @@
+package misc
+
+type Result[T any] struct {
+	Value T
+	Err   error
+}

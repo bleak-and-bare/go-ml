@@ -213,27 +213,42 @@ type Fold[T constraints.Float] struct {
 	Train *DataSet[T]
 }
 
-func (ds *DataSet[T]) HoldOutSplit(split int) iter.Seq[Fold[T]] {
+func (ds *DataSet[T]) HoldOutSplit(split int) iter.Seq[misc.Result[Fold[T]]] {
 	if split <= 0 {
 		return nil
 	}
 
-	return func(yield func(Fold[T]) bool) {
+	return func(yield func(misc.Result[Fold[T]]) bool) {
 		for range split {
 			ds.Shuffle()
 			test, err := ds.Extract(0.0, 1/float32(split))
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "DataSet.KFoldSplit : %v", err)
-				return
+				if !yield(misc.Result[Fold[T]]{
+					Err:   fmt.Errorf("DataSet.KFoldSplit : %v", err),
+					Value: Fold[T]{},
+				}) {
+					return
+				}
+
+				continue
 			}
 
 			train, err := ds.Extract(1/float32(split), 1.0)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "DataSet.KFoldSplit : %v", err)
-				return
+				if !yield(misc.Result[Fold[T]]{
+					Err:   fmt.Errorf("DataSet.KFoldSplit : %v", err),
+					Value: Fold[T]{},
+				}) {
+					return
+				}
+
+				continue
 			}
 
-			if !yield(Fold[T]{test, train}) {
+			if !yield(misc.Result[Fold[T]]{
+				Value: Fold[T]{test, train},
+				Err:   nil,
+			}) {
 				return
 			}
 		}
