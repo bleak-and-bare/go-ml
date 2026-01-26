@@ -1,0 +1,32 @@
+package ws
+
+import (
+	"fmt"
+	"net/http"
+	"os"
+
+	"github.com/gorilla/websocket"
+)
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+	// ReadBufferSize:  1024, WriteBufferSize: 1024,
+}
+
+func ServeWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		return true
+	}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "serve_ws : failed to upgrade connection %v", err)
+		return
+	}
+
+	client := NewClient(hub, conn)
+
+	go client.WritePump()
+	go client.ReadPump()
+}

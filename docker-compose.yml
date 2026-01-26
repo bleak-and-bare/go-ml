@@ -1,0 +1,9 @@
+services:
+  log_server:
+    build: ./log_server/
+    ports:
+      - ${SERVER_PORT}:${SERVER_PORT}
+    env_file:
+      - .env
+    volumes:
+      - ./${PLAYGROUND_FOLDER}:/app/${PLAYGROUND_FOLDER}

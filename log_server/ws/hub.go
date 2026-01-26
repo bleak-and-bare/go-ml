@@ -1,6 +1,10 @@
-package main
+package ws
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
 
 type Hub struct {
 	// registered clients
@@ -27,6 +31,16 @@ func (h *Hub) Register(c *Client) { h.register <- c }
 func (h *Hub) Unregister(c *Client) { h.unregister <- c }
 
 func (h *Hub) Broadcast(msg []byte) { h.broadcast <- msg }
+
+func (h *Hub) SendErrMsg(msg string) {
+	b, err := json.Marshal(NewErrMessage(msg))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Hub.SendErrMsg : %v", err)
+		return
+	}
+
+	h.Broadcast(b)
+}
 
 func (h *Hub) Run() {
 	for {

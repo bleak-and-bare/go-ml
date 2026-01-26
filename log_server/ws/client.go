@@ -1,7 +1,7 @@
-package main
+package ws
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -11,7 +11,7 @@ import (
 
 var (
 	new_line = []byte{'\n'}
-	space    = []byte{' '}
+	// space    = []byte{' '}
 )
 
 type Client struct {
@@ -59,10 +59,14 @@ func (c *Client) ReadPump() {
 			}
 			return
 		}
+		// msg = bytes.TrimSpace(bytes.ReplaceAll(msg, new_line, space))
 
-		msg = bytes.TrimSpace(bytes.ReplaceAll(msg, new_line, space))
-		fmt.Println(string(msg))
-		c.hub.Broadcast(msg)
+		var m Message
+		if err := json.Unmarshal(msg, &m); err != nil {
+			c.hub.SendErrMsg(err.Error())
+		} else if err := m.Interpret(); err != nil {
+			c.hub.SendErrMsg(err.Error())
+		}
 	}
 }
 
