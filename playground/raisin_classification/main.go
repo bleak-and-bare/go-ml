@@ -34,9 +34,6 @@ func main() {
 	})
 	ds.Shuffle()
 
-	// chunk, _ := ds.Extract(0.0, 0.125)
-	// ds = *chunk
-
 	train, _ := ds.Extract(0.0, 0.75)
 	test, _ := ds.Extract(0.75, 1.0)
 

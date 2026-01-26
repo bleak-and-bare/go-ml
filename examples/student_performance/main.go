@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bleak-and-bare/machine_learning/internal/dataset"
-	"github.com/bleak-and-bare/machine_learning/processing"
-	"github.com/bleak-and-bare/machine_learning/regression/linear"
+	"github.com/bleak-and-bare/go-ml/machine_learning/common/dataset"
+	"github.com/bleak-and-bare/go-ml/machine_learning/processing"
+	"github.com/bleak-and-bare/go-ml/machine_learning/regression/linear"
 )
 
 func main() {
 	const pref_idx = 5
 	ds := dataset.NewDataSet[float32](pref_idx)
 
-	if err := ds.LoadCsv("../dataset/Student_Performance.csv", ','); err != nil {
+	if err := ds.LoadCsv("./examples/dataset/Student_Performance.csv", ','); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load csv : %v", err)
 		return
 	}

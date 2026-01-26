@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bleak-and-bare/machine_learning/internal/dataset"
-	"github.com/bleak-and-bare/machine_learning/processing"
-	"github.com/bleak-and-bare/machine_learning/regression/linear"
+	"github.com/bleak-and-bare/go-ml/machine_learning/common/dataset"
+	"github.com/bleak-and-bare/go-ml/machine_learning/processing"
+	"github.com/bleak-and-bare/go-ml/machine_learning/regression/linear"
 )
 
 func main() {
 	ds := dataset.NewDataSet[float32](2)
-	if err := ds.LoadCsv("../dataset/Salary_dataset.csv", ','); err != nil {
+	if err := ds.LoadCsv("./examples/dataset/Salary_dataset.csv", ','); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load dataset : %v", err)
 		return
 	}
