@@ -1,9 +1,7 @@
 package ws
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 )
 
 type Hub struct {
@@ -32,16 +30,6 @@ func (h *Hub) Unregister(c *Client) { h.unregister <- c }
 
 func (h *Hub) Broadcast(msg []byte) { h.broadcast <- msg }
 
-func (h *Hub) SendErrMsg(msg string) {
-	b, err := json.Marshal(NewErrMessage(msg))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Hub.SendErrMsg : %v", err)
-		return
-	}
-
-	h.Broadcast(b)
-}
-
 func (h *Hub) Run() {
 	for {
 		select {
@@ -51,17 +39,11 @@ func (h *Hub) Run() {
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				fmt.Printf("Hub.Run : %p unregistered\n", client)
-				client.Close()
 				delete(h.clients, client)
 			}
 		case message := <-h.broadcast:
 			for client := range h.clients {
-				select {
-				case client.Send() <- message:
-				default:
-					client.Close()
-					delete(h.clients, client)
-				}
+				client.Send() <- message
 			}
 		}
 	}

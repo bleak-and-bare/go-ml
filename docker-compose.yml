@@ -6,4 +6,4 @@ services:
     env_file:
       - .env
     volumes:
-      - ./${PLAYGROUND_FOLDER}:/app/${PLAYGROUND_FOLDER}
+      - ./${PLAYGROUND_PATH}:/app/playground

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -17,32 +19,48 @@ var (
 type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
+	cmd  *exec.Cmd
 	send chan []byte
 }
 
 // create then register a new client
 func NewClient(hub *Hub, conn *websocket.Conn) *Client {
-	client := &Client{hub, conn, make(chan []byte, 256)}
+	client := &Client{hub, conn, nil, make(chan []byte, 256)}
 	hub.Register(client)
 	return client
-}
-
-func (c *Client) Close() {
-	close(c.send)
 }
 
 func (c *Client) Send() chan<- []byte {
 	return c.send
 }
 
-func (c *Client) unregister() {
+func (c *Client) SetExecCmd(cmd *exec.Cmd) {
+	c.cmd = cmd
+}
+
+func (c *Client) GetExecCmd() *exec.Cmd {
+	return c.cmd
+}
+
+func (c *Client) Unregister() {
 	c.hub.Unregister(c)
 	c.conn.Close()
+
+	if c.cmd != nil {
+		err := syscall.Kill(-c.cmd.Process.Pid, syscall.SIGTERM)
+		if err != nil {
+			err = syscall.Kill(-c.cmd.Process.Pid, syscall.SIGKILL)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Client.Unregister : failed to kill %v :  %v", c.cmd.Process.Pid, err)
+			}
+		}
+	}
+	close(c.send)
 }
 
 // pumps message and push to the hub
-func (c *Client) ReadPump() {
-	defer c.unregister()
+func (c *Client) ReadPump(cmd chan<- Command) {
+	defer c.Unregister()
 
 	c.conn.SetReadLimit(MAX_MSG_SIZE)
 	c.conn.SetReadDeadline(time.Now().Add(PONG_WAIT))
@@ -57,15 +75,24 @@ func (c *Client) ReadPump() {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure) {
 				fmt.Fprintf(os.Stderr, "Client.ReadPump : %v\n", err)
 			}
+
 			return
 		}
 		// msg = bytes.TrimSpace(bytes.ReplaceAll(msg, new_line, space))
 
 		var m Message
 		if err := json.Unmarshal(msg, &m); err != nil {
-			c.hub.SendErrMsg(err.Error())
-		} else if err := m.Interpret(); err != nil {
-			c.hub.SendErrMsg(err.Error())
+			err_bytes, _ := json.Marshal(Message{
+				Type: ERROR,
+				Data: err.Error(),
+			})
+			c.send <- err_bytes
+			continue
+		}
+
+		cmd <- Command{
+			Client:  c,
+			Message: m,
 		}
 	}
 }

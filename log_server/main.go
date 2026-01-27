@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/bleak-and-bare/go-ml/log_server/command"
 	"github.com/bleak-and-bare/go-ml/log_server/ws"
 )
 
@@ -18,8 +19,11 @@ func main() {
 	hub := ws.NewHub()
 	go hub.Run()
 
+	c := command.NewCmdController()
+	go c.Run()
+
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		ws.ServeWS(hub, w, r)
+		ServeWS(hub, c.Commands(), w, r)
 	})
 
 	fmt.Printf("Listening on port %v\n", port)
