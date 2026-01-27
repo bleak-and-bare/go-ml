@@ -1,11 +1,7 @@
-import { MantineProvider } from '@mantine/core'
-import { WebSocketProvider } from './WebSocketContext'
+import "@mantine/core/styles.css";
+import { MantineProvider } from "@mantine/core";
+import { theme } from "./theme";
 
-function App() {
-    return <MantineProvider>
-        <WebSocketProvider>
-        </WebSocketProvider>
-    </MantineProvider>
+export default function App() {
+  return <MantineProvider theme={theme}>App</MantineProvider>;
 }
-
-export default App
