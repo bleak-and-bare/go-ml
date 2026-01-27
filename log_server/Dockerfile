@@ -13,7 +13,6 @@ COPY . .
 RUN go build -trimpath -ldflags="-s -w" -o logserver
 
 # -------------------- runtime
-# lightweight with no shell
 FROM golang:1.25.5-alpine 
 
 WORKDIR /app

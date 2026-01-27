@@ -1,13 +1,8 @@
 package command
 
 import (
-	"bufio"
-	"encoding/json"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
-	"slices"
 	"syscall"
 
 	"github.com/bleak-and-bare/go-ml/log_server/ws"
@@ -25,47 +20,6 @@ func (c *CmdController) Commands() chan<- ws.Command {
 	return c.cmds
 }
 
-func send_info_to_client(client *ws.Client, msg string) {
-	msg_bytes, _ := json.Marshal(ws.Message{
-		Type: ws.INFO,
-		Data: msg,
-	})
-	client.Send() <- msg_bytes
-}
-
-func send_error_to_client(client *ws.Client, err error) {
-	err_bytes, _ := json.Marshal(ws.Message{
-		Type: ws.ERROR,
-		Data: err.Error(),
-	})
-	client.Send() <- err_bytes
-}
-
-func stream_frame(r io.Reader, f func([]byte)) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := slices.Clone(scanner.Bytes())
-		f(line)
-	}
-}
-
-func stream_output(cmd *exec.Cmd, client *ws.Client) error {
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return err
-	}
-
-	stdio, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-
-	go stream_frame(stdio, func(b []byte) { client.Send() <- b })
-	go stream_frame(stderr, func(b []byte) { client.Send() <- b })
-
-	return nil
-}
-
 func (c *CmdController) Run() {
 	for cmd := range c.cmds {
 		switch cmd.Type {
@@ -80,7 +34,7 @@ func (c *CmdController) Run() {
 				send_error_to_client(cmd.Client, fmt.Errorf("message.data should be a folder name"))
 			}
 
-			exec_cmd, err := CreateCmd(data)
+			exec_cmd, err := CreateGoRunCmd(data)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "CmdController.Run : %v\n", err)
 				send_error_to_client(cmd.Client, err)
