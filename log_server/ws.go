@@ -17,10 +17,6 @@ var upgrader = websocket.Upgrader{
 }
 
 func ServeWS(hub *ws.Hub, cmd chan<- ws.Command, w http.ResponseWriter, r *http.Request) {
-	upgrader.CheckOrigin = func(r *http.Request) bool {
-		return true
-	}
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "serve_ws : failed to upgrade connection %v", err)
