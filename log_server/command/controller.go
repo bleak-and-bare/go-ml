@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"time"
 
 	"github.com/bleak-and-bare/go-ml/log_server/ws"
 )
@@ -32,6 +33,7 @@ func (c *CmdController) Run() {
 			data, ok := cmd.Data.(string)
 			if !ok {
 				send_error_to_client(cmd.Client, fmt.Errorf("message.data should be a folder name"))
+				continue
 			}
 
 			exec_cmd, err := CreateGoRunCmd(data)
@@ -47,6 +49,7 @@ func (c *CmdController) Run() {
 			}
 
 			cmd.Client.SetExecCmd(exec_cmd)
+			start := time.Now()
 			err = exec_cmd.Start()
 
 			if err != nil {
@@ -57,6 +60,11 @@ func (c *CmdController) Run() {
 
 			go func() {
 				exec_cmd.Wait()
+
+				fmt.Println("CmdController.Run : one process finished")
+				fmt.Println(exec_cmd.ProcessState)
+
+				notify_exec_finished_to_client(start, cmd.Client)
 				cmd.Client.SetExecCmd(nil)
 			}()
 

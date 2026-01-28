@@ -6,10 +6,9 @@ import (
 )
 
 func main() {
-	var i int
-	for {
+	for i := 0; i < 30; i++ {
 		fmt.Println(i)
 		i++
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }

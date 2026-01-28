@@ -1,11 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/bleak-and-bare/go-ml/log_server/command"
 	"github.com/bleak-and-bare/go-ml/log_server/ws"
@@ -19,6 +19,7 @@ func main() {
 
 	hub := ws.NewHub()
 	go hub.Run()
+	go hub.NotifyClients(monitor_processes, time.Second)
 
 	c := command.NewCmdController()
 	go c.Run()
@@ -34,35 +35,4 @@ func main() {
 	if err != nil {
 		log.Fatal("http.ListenAndServe : ", err)
 	}
-}
-
-func get_playgrounds(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	playground := "/app/playground"
-	if path, ok := os.LookupEnv("MAPPED_PLAYGROUND_PATH"); ok {
-		playground = path
-	}
-
-	files, err := os.ReadDir(playground)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "GET /api/playgrounds : %v\n", err)
-		http.Error(w, "Technical error", http.StatusInternalServerError)
-		return
-	}
-
-	var folders []string
-	for _, file := range files {
-		if file.IsDir() {
-			folders = append(folders, file.Name())
-		}
-	}
-
-	w.Header().Set("Content-type", "application/json")
-	json.NewEncoder(w).Encode(map[string][]string{
-		"folders": folders,
-	})
 }

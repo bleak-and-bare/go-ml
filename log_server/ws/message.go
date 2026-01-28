@@ -3,12 +3,14 @@ package ws
 type MessageType string
 
 const (
-	EXECUTE MessageType = "execute"
-	ABORT   MessageType = "abort"
-	INFO    MessageType = "info"
-	ERROR   MessageType = "error"
-	PAUSE   MessageType = "pause"
-	RESUME  MessageType = "resume"
+	EXECUTE       MessageType = "execute"
+	ABORT         MessageType = "abort"
+	INFO          MessageType = "info"
+	ERROR         MessageType = "error"
+	PAUSE         MessageType = "pause"
+	RESUME        MessageType = "resume"
+	EXEC_FINISHED MessageType = "exec_finshed"
+	STATS         MessageType = "stats"
 )
 
 type Message struct {

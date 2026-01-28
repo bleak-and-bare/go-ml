@@ -7,6 +7,7 @@ type MessageHandler = (msg: string) => void
 interface WSContext {
     send: (data: string) => void
     addSubscriber: (h: MessageHandler) => () => void
+    close: () => void
     isConnected: () => boolean
 }
 
@@ -27,23 +28,31 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const wsAddress: string = import.meta.env.VITE_SERVER || "localhost:8000"
-        const ws = new WebSocket(`ws://${wsAddress}/ws`)
-        socketRef.current = ws
+        try {
+            const ws = new WebSocket(`ws://${wsAddress}/ws`)
+            socketRef.current = ws
 
-        ws.onopen = () => setConnected(true)
-        ws.onclose = () => setConnected(false)
-        ws.onmessage = (event) => {
-            for (const handler of handlersRef.current) {
-                handler(event.data)
+            ws.onopen = () => setConnected(true)
+            ws.onclose = () => setConnected(false)
+            ws.onmessage = (event) => {
+                for (const handler of handlersRef.current) {
+                    handler(event.data)
+                }
             }
+            return () => ws.close()
+        } catch (e) {
+            console.error("weehoo : " + e)
         }
-
-        return () => ws.close()
     }, [])
 
     const send = useCallback((message: string) => {
         if (socketRef.current?.readyState === WebSocket.OPEN)
             socketRef.current.send(message)
+    }, [])
+
+    const close = useCallback(() => {
+        if (socketRef.current?.readyState === WebSocket.OPEN)
+            socketRef.current.close()
     }, [])
 
     const addSubscriber = useCallback((handler: MessageHandler) => {
@@ -53,6 +62,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
     return <WebSocketContext.Provider value={{
         send,
+        close,
         addSubscriber,
         isConnected: () => connected,
     }}>

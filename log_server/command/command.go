@@ -10,7 +10,9 @@ import (
 	"path/filepath"
 	"slices"
 	"syscall"
+	"time"
 
+	"github.com/bleak-and-bare/go-ml/log_server/stat"
 	"github.com/bleak-and-bare/go-ml/log_server/ws"
 )
 
@@ -51,6 +53,22 @@ func send_error_to_client(client *ws.Client, err error) {
 		Data: err.Error(),
 	})
 	client.Send() <- err_bytes
+}
+
+func notify_exec_finished_to_client(start time.Time, client *ws.Client) {
+	exec_cmd := client.GetExecCmd()
+	ps := exec_cmd.ProcessState
+
+	msg_bytes, _ := json.Marshal(ws.Message{
+		Type: ws.EXEC_FINISHED,
+		Data: stat.ProcessStat{
+			Duration:   time.Since(start),
+			UserTime:   ps.UserTime(),
+			SystemTime: ps.SystemTime(),
+			ExitStatus: ps.ExitCode(),
+		},
+	})
+	client.Send() <- msg_bytes
 }
 
 func stream_frame(r io.Reader, f func([]byte)) {
