@@ -70,7 +70,10 @@ func (h *Hub) Run() {
 			h.mutex.Unlock()
 		case message := <-h.broadcast:
 			for client := range h.clients {
-				client.Send() <- message
+				select {
+				case <-client.Context().Done():
+				case client.Send() <- message:
+				}
 			}
 		}
 	}

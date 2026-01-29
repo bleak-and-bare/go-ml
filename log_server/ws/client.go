@@ -1,12 +1,12 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -22,12 +22,25 @@ type Client struct {
 	conn          *websocket.Conn
 	cmd           *exec.Cmd
 	send          chan []byte
+	ctx           context.Context
+	cancel        func()
 	PausedProcess atomic.Bool
 }
 
 // create then register a new client
 func NewClient(hub *Hub, conn *websocket.Conn) *Client {
-	client := &Client{hub, conn, nil, make(chan []byte, 256), atomic.Bool{}}
+	ctx, cancel := context.WithCancel(context.Background())
+	client := &Client{
+		hub:           hub,
+		conn:          conn,
+		cmd:           nil,
+		send:          make(chan []byte, 256),
+		PausedProcess: atomic.Bool{},
+	}
+
+	client.ctx = ctx
+	client.cancel = cancel
+
 	hub.Register(client)
 	return client
 }
@@ -44,25 +57,28 @@ func (c *Client) GetExecCmd() *exec.Cmd {
 	return c.cmd
 }
 
-func (c *Client) Unregister() {
-	c.hub.Unregister(c)
-	c.conn.Close()
+func (c *Client) Context() context.Context {
+	return c.ctx
+}
 
+func (c *Client) Unregister(cmd chan<- Command) {
+	c.cancel()
 	if c.cmd != nil {
-		err := syscall.Kill(-c.cmd.Process.Pid, syscall.SIGTERM)
-		if err != nil {
-			err = syscall.Kill(-c.cmd.Process.Pid, syscall.SIGKILL)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Client.Unregister : failed to kill %v :  %v", c.cmd.Process.Pid, err)
-			}
+		cmd <- Command{
+			Client: c,
+			Message: Message{
+				Type: ABORT,
+			},
 		}
 	}
-	close(c.send)
+
+	c.hub.Unregister(c)
+	c.conn.Close()
 }
 
 // pumps message and push to the hub
 func (c *Client) ReadPump(cmd chan<- Command) {
-	defer c.Unregister()
+	defer c.Unregister(cmd)
 
 	c.conn.SetReadLimit(MAX_MSG_SIZE)
 	c.conn.SetReadDeadline(time.Now().Add(PONG_WAIT))

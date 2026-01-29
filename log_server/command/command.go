@@ -44,7 +44,11 @@ func send_info_to_client(client *ws.Client, msg string) {
 		Type: ws.INFO,
 		Data: msg,
 	})
-	client.Send() <- msg_bytes
+
+	select {
+	case <-client.Context().Done():
+	case client.Send() <- msg_bytes:
+	}
 }
 
 func send_error_to_client(client *ws.Client, err error) {
@@ -52,7 +56,11 @@ func send_error_to_client(client *ws.Client, err error) {
 		Type: ws.ERROR,
 		Data: err.Error(),
 	})
-	client.Send() <- err_bytes
+
+	select {
+	case <-client.Context().Done():
+	case client.Send() <- err_bytes:
+	}
 }
 
 func notify_exec_finished_to_client(start time.Time, client *ws.Client) {
@@ -68,7 +76,11 @@ func notify_exec_finished_to_client(start time.Time, client *ws.Client) {
 			ExitStatus: ps.ExitCode(),
 		},
 	})
-	client.Send() <- msg_bytes
+
+	select {
+	case <-client.Context().Done():
+	case client.Send() <- msg_bytes:
+	}
 }
 
 func stream_frame(r io.Reader, f func([]byte)) {

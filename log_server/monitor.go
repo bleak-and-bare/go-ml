@@ -24,7 +24,11 @@ func monitor_processes(c *ws.Client, dt time.Duration) {
 				Type: ws.STATS,
 				Data: stat.NewStat(cpu, mem, dt),
 			})
-			c.Send() <- msg_bytes
+
+			select {
+			case <-c.Context().Done():
+			case c.Send() <- msg_bytes:
+			}
 		}
 	}
 
@@ -33,6 +37,10 @@ func monitor_processes(c *ws.Client, dt time.Duration) {
 			Type: ws.ERROR,
 			Data: err.Error(),
 		})
-		c.Send() <- err_bytes
+
+		select {
+		case <-c.Context().Done():
+		case c.Send() <- err_bytes:
+		}
 	}
 }
