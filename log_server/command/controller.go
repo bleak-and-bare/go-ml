@@ -29,6 +29,7 @@ func (c *CmdController) Run() {
 				send_error_to_client(cmd.Client, fmt.Errorf("You can only run one process"))
 				continue
 			}
+			fmt.Printf("CmdController.Run : %p running process\n", cmd.Client)
 
 			data, ok := cmd.Data.(string)
 			if !ok {
@@ -61,7 +62,10 @@ func (c *CmdController) Run() {
 			go func() {
 				exec_cmd.Wait()
 
-				fmt.Println("CmdController.Run : one process finished")
+				// for consistency
+				cmd.Client.PausedProcess.Store(false)
+
+				fmt.Printf("CmdController.Run : %p process finished running\n", cmd.Client)
 				fmt.Println(exec_cmd.ProcessState)
 
 				notify_exec_finished_to_client(start, cmd.Client)
@@ -74,45 +78,54 @@ func (c *CmdController) Run() {
 				fmt.Fprintf(os.Stderr, "CmdController.Run : %p didn't spawn any process\n", cmd.Client)
 				continue
 			}
+			fmt.Printf("CmdController.Run : %p terminating process\n", cmd.Client)
 
 			go func() {
-				err := syscall.Kill(-exec_cmd.Process.Pid, syscall.SIGTERM)
+				err := fmt.Errorf("")
+				if !cmd.Client.PausedProcess.Load() {
+					err = syscall.Kill(-exec_cmd.Process.Pid, syscall.SIGTERM)
+				}
+
 				if err != nil {
 					err = syscall.Kill(-exec_cmd.Process.Pid, syscall.SIGKILL)
 					if err != nil {
 						send_error_to_client(cmd.Client, err)
+						return
 					}
-					return
 				}
 
 				send_info_to_client(cmd.Client, "Process terminated.")
 			}()
 
 		case ws.PAUSE:
-			fmt.Printf("CmdController.Run : %v pausing process\n", cmd.Client)
 			exec_cmd := cmd.Client.GetExecCmd()
 			if exec_cmd == nil {
 				fmt.Fprintf(os.Stderr, "CmdController.Run : %p didn't spawn any process\n", cmd.Client)
 				continue
 			}
+			fmt.Printf("CmdController.Run : %p pausing process\n", cmd.Client)
 
 			go func() {
 				if err := syscall.Kill(-exec_cmd.Process.Pid, syscall.SIGSTOP); err != nil {
 					send_error_to_client(cmd.Client, err)
+				} else {
+					cmd.Client.PausedProcess.Store(true)
 				}
 			}()
 
 		case ws.RESUME:
-			fmt.Printf("CmdController.Run : %v resuming process\n", cmd.Client)
 			exec_cmd := cmd.Client.GetExecCmd()
 			if exec_cmd == nil {
 				fmt.Fprintf(os.Stderr, "CmdController.Run : %p didn't spawn any process\n", cmd.Client)
 				continue
 			}
+			fmt.Printf("CmdController.Run : %p resuming process\n", cmd.Client)
 
 			go func() {
 				if err := syscall.Kill(-exec_cmd.Process.Pid, syscall.SIGCONT); err != nil {
 					send_error_to_client(cmd.Client, err)
+				} else {
+					cmd.Client.PausedProcess.Store(false)
 				}
 			}()
 		}

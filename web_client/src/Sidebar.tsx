@@ -1,9 +1,9 @@
-import { ActionIcon, Autocomplete, Divider, Group, Loader, Stack, Text, ThemeIcon, Title } from "@mantine/core"
+import { ActionIcon, Divider, Group, Loader, Select, Stack, Text, ThemeIcon, Title } from "@mantine/core"
 import { IconLink, IconPlayerPause, IconPlayerPlay, IconRotateClockwise, IconUnlink, IconX } from "@tabler/icons-react"
 import { useState, useEffect, type ReactElement } from "react"
 import { useWebSocket } from "./WebSocketContext"
 import ExecStatus from "./ExecStatus"
-import MessageType from "./MessageType"
+import { Message } from "./Message"
 import { notifications } from "@mantine/notifications"
 import { SystemInfo } from "./SystemInfo"
 
@@ -41,13 +41,13 @@ export function Sidebar(): ReactElement {
     const resumeOrRunExec = () => {
         if (execStatus === ExecStatus.PAUSED) {
             setExecStatus(ExecStatus.RUNNING)
-            // ws.send(JSON.stringify({ type: "resume" }))
+            ws.send(JSON.stringify({ type: "resume" }))
         } else if (curFolder.length > 0) {
             setExecStatus(ExecStatus.RUNNING)
-            // ws.send(JSON.stringify({
-            //     type: "execute",
-            //     data: curFolder
-            // }))
+            ws.send(JSON.stringify({
+                type: "execute",
+                data: curFolder
+            }))
         } else {
             notifications.show({ color: 'red', title: 'No program to run', message: 'Select a program' })
         }
@@ -55,15 +55,17 @@ export function Sidebar(): ReactElement {
 
     const pauseExecution = () => {
         setExecStatus(ExecStatus.PAUSED)
-        ws.send(JSON.stringify({ type: "resume" }))
+        ws.send(JSON.stringify({ type: "pause" }))
     }
 
     const msgHandler = (msgStr: string) => {
         try {
-            const msg: { type: string, data?: string } = JSON.parse(msgStr)
+            const msg: Message = JSON.parse(msgStr)
+            console.log(msg)
             switch (msg.type) {
-                case MessageType.EXEC_FINISHED:
+                case "exec_finished":
                     setExecStatus(ExecStatus.STOPPED)
+                    console.log(msg.data)
                     break
             }
         } catch (e) {
@@ -77,35 +79,42 @@ export function Sidebar(): ReactElement {
         return unsubscribe
     }, [])
 
+    useEffect(() => {
+        if (!ws.isConnected) {
+            setExecStatus(ExecStatus.STOPPED)
+        }
+    }, [ws.isConnected])
+
     return <Stack gap="md">
         <Group gap="xs" justify="flex-end">
             <ThemeIcon variant="transparent" size="sm">
-                {ws.isConnected() ? <IconLink /> : <IconUnlink />}
+                {ws.isConnected ? <IconLink /> : <IconUnlink />}
             </ThemeIcon>
-            <Text c="dimmed">{ws.isConnected() ? "Connected" : "Disconnected"}</Text>
+            <Text c="dimmed">{ws.isConnected ? "Connected" : "Disconnected"}</Text>
         </Group>
         <Group justify="space-between">
             <Title order={4}>Execution control</Title>
-            <Group>
-                <ActionIcon onClick={abortExecution} variant="transparent">
+            <Group >
+                <ActionIcon disabled={!ws.isConnected} onClick={abortExecution} variant="transparent">
                     <IconX />
                 </ActionIcon>
                 {execStatus === ExecStatus.RUNNING ? <ActionIcon onClick={pauseExecution} variant="transparent">
                     <IconPlayerPause />
-                </ActionIcon> : <ActionIcon onClick={resumeOrRunExec} variant="transparent">
+                </ActionIcon> : <ActionIcon disabled={!ws.isConnected} onClick={resumeOrRunExec} variant="transparent">
                     <IconPlayerPlay />
                 </ActionIcon>}
             </Group>
         </Group>
         <Group align="end">
-            <Autocomplete
+            <Select
                 flex={1}
+                searchable
                 label="Select program to run"
                 placeholder="Type folder name"
                 selectFirstOptionOnChange
                 data={playground}
-                onChange={setCurFolder}
-                disabled={execStatus !== ExecStatus.STOPPED}
+                onSearchChange={setCurFolder}
+                disabled={!ws.isConnected || execStatus !== ExecStatus.STOPPED}
             />
             {loading ? <Loader color="blue" type="dots" size="sm" /> :
                 <ActionIcon onClick={() => fetchPlayground().then(playground => setPlayground(playground))} variant="subtle" title="Refetch">

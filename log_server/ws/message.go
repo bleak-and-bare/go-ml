@@ -9,7 +9,7 @@ const (
 	ERROR         MessageType = "error"
 	PAUSE         MessageType = "pause"
 	RESUME        MessageType = "resume"
-	EXEC_FINISHED MessageType = "exec_finshed"
+	EXEC_FINISHED MessageType = "exec_finished"
 	STATS         MessageType = "stats"
 )
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -17,15 +18,16 @@ var (
 )
 
 type Client struct {
-	hub  *Hub
-	conn *websocket.Conn
-	cmd  *exec.Cmd
-	send chan []byte
+	hub           *Hub
+	conn          *websocket.Conn
+	cmd           *exec.Cmd
+	send          chan []byte
+	PausedProcess atomic.Bool
 }
 
 // create then register a new client
 func NewClient(hub *Hub, conn *websocket.Conn) *Client {
-	client := &Client{hub, conn, nil, make(chan []byte, 256)}
+	client := &Client{hub, conn, nil, make(chan []byte, 256), atomic.Bool{}}
 	hub.Register(client)
 	return client
 }
