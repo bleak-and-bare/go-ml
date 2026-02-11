@@ -1,3 +1,8 @@
+type CPUStat = {
+    user: number, // milliseconds
+    system: number, // milliseconds
+}
+
 type Message = {
     type: "execute" | "info" | "error",
     data: string,
@@ -6,20 +11,23 @@ type Message = {
 } | {
     type: "exec_finished",
     data: {
-        duration: number,
-        user_time: number,
-        system_time: number,
-        exit_status: number
+        duration: number, // milliseconds
+        user_time: number, // milliseconds
+        system_time: number, // milliseconds
+        exit_status: number // milliseconds
     }
 } | {
     type: "stats",
     data: {
-        user_cpu: number,
-        system_cpu: number,
-        rss: number,
-        peak_rss: number,
-        delta: number
+        process: CPUStat,
+        global: number, // milliseconds
+        rss: number, // kB
+        peak_rss: number, // kB
+        delta: number // milliseconds
     }
+} | {
+    type: "fulfilled",
+    data: Exclude<Message["type"], "fulfilled">
 }
 
 type MessageType = Message["type"]

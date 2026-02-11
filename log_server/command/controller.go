@@ -60,6 +60,7 @@ func (c *CmdController) Run() {
 			}
 
 			go func() {
+				fmt.Printf("spawned PID=%d\n", exec_cmd.Process.Pid)
 				exec_cmd.Wait()
 
 				// for consistency
@@ -71,6 +72,8 @@ func (c *CmdController) Run() {
 				notify_exec_finished_to_client(start, cmd.Client)
 				cmd.Client.SetExecCmd(nil)
 			}()
+
+			notify_req_fulfilled_to_client(cmd.Type, cmd.Client)
 
 		case ws.ABORT:
 			exec_cmd := cmd.Client.GetExecCmd()
@@ -97,6 +100,8 @@ func (c *CmdController) Run() {
 				send_info_to_client(cmd.Client, "Process terminated.")
 			}()
 
+			notify_req_fulfilled_to_client(cmd.Type, cmd.Client)
+
 		case ws.PAUSE:
 			exec_cmd := cmd.Client.GetExecCmd()
 			if exec_cmd == nil {
@@ -113,6 +118,8 @@ func (c *CmdController) Run() {
 				}
 			}()
 
+			notify_req_fulfilled_to_client(cmd.Type, cmd.Client)
+
 		case ws.RESUME:
 			exec_cmd := cmd.Client.GetExecCmd()
 			if exec_cmd == nil {
@@ -128,6 +135,8 @@ func (c *CmdController) Run() {
 					cmd.Client.PausedProcess.Store(false)
 				}
 			}()
+
+			notify_req_fulfilled_to_client(cmd.Type, cmd.Client)
 		}
 	}
 }

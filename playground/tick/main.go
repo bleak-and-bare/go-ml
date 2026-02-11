@@ -1,14 +1,24 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
 
+type Message struct {
+	Type string `json:"type"`
+	Data any    `json:"data"`
+}
+
 func main() {
-	for i := 0; i < 30; i++ {
-		fmt.Println(i)
-		i++
-		time.Sleep(1 * time.Second)
+	for i := range 3 {
+		msg, _ := json.Marshal(Message{
+			Type: "info",
+			Data: i,
+		})
+
+		fmt.Println(string(msg))
+		time.Sleep(time.Second)
 	}
 }

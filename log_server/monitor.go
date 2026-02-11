@@ -10,7 +10,7 @@ import (
 
 func monitor_processes(c *ws.Client, dt time.Duration) {
 	cmd := c.GetExecCmd()
-	if cmd == nil {
+	if cmd == nil || cmd.Process == nil {
 		return
 	}
 

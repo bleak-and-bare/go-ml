@@ -13,7 +13,7 @@ interface WSContext {
 
 const WebSocketContext = createContext<WSContext | null>(null)
 
-export function useWebSocket() {
+function useWebSocket() {
     const ctx = useContext(WebSocketContext)
     if (!ctx) {
         throw new Error("useWebSocket hook must be used within provider")
@@ -21,10 +21,9 @@ export function useWebSocket() {
     return ctx
 }
 
-export function WebSocketProvider({ children }: { children: React.ReactNode }) {
+function WebSocketProvider({ children }: { children: React.ReactNode }) {
     const MAX_CONN_ATEMPT = 10
     const socketRef = useRef<WebSocket | null>(null)
-    const handlersRef = useRef<Set<MessageHandler>>(new Set())
     const [connected, setConnected] = useState(false)
 
     const wsConnect = async (): Promise<WebSocket> => {
@@ -34,7 +33,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
             ws.onopen = () => {
                 setConnected(true)
-                return res(ws)
+                res(ws)
             }
 
             ws.onerror = (err) => {
@@ -42,31 +41,32 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
             }
 
             ws.onclose = () => setConnected(false)
-            ws.onmessage = (event) => {
-                for (const handler of handlersRef.current) {
-                    handler(event.data)
-                }
-            }
         })
     }
 
     useEffect(() => {
+        let reconnectTask = -1
         if (!connected) {
             let attempt = 0
-            const i = setInterval(() => {
+            reconnectTask = setInterval(() => {
                 if (attempt >= MAX_CONN_ATEMPT) {
-                    clearInterval(i)
+                    clearInterval(reconnectTask)
                     return
                 }
 
                 attempt++
                 wsConnect().then(ws => {
                     socketRef.current = ws
-                    clearInterval(i)
+                    clearInterval(reconnectTask)
                 }).catch(err => console.error(err))
             }, 3000)
 
-            return () => clearInterval(i)
+            return () => clearInterval(reconnectTask)
+        }
+
+        return () => {
+            if (reconnectTask > 0) clearInterval(reconnectTask)
+            socketRef.current?.close()
         }
     }, [connected])
 
@@ -81,8 +81,9 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     }, [])
 
     const addSubscriber = useCallback((handler: MessageHandler) => {
-        handlersRef.current.add(handler)
-        return () => handlersRef.current.delete(handler)
+        const cb = (e: MessageEvent) => handler(e.data)
+        socketRef.current?.addEventListener('message', cb)
+        return () => socketRef.current?.removeEventListener('message', cb)
     }, [])
 
     return <WebSocketContext.Provider value={{
@@ -94,3 +95,5 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         {children}
     </WebSocketContext.Provider>
 }
+
+export { useWebSocket, WebSocketProvider }

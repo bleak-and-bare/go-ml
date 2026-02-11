@@ -19,7 +19,7 @@ func main() {
 
 	hub := ws.NewHub()
 	go hub.Run()
-	go hub.NotifyClients(monitor_processes, time.Second)
+	go hub.NotifyClients(monitor_processes, 500*time.Millisecond)
 
 	c := command.NewCmdController()
 	go c.Run()

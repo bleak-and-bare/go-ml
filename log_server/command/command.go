@@ -63,6 +63,18 @@ func send_error_to_client(client *ws.Client, err error) {
 	}
 }
 
+func notify_req_fulfilled_to_client(req ws.MessageType, client *ws.Client) {
+	msg_bytes, _ := json.Marshal(ws.Message{
+		Type: ws.FULFILLED,
+		Data: req,
+	})
+
+	select {
+	case <-client.Context().Done():
+	case client.Send() <- msg_bytes:
+	}
+}
+
 func notify_exec_finished_to_client(start time.Time, client *ws.Client) {
 	exec_cmd := client.GetExecCmd()
 	ps := exec_cmd.ProcessState
@@ -70,9 +82,9 @@ func notify_exec_finished_to_client(start time.Time, client *ws.Client) {
 	msg_bytes, _ := json.Marshal(ws.Message{
 		Type: ws.EXEC_FINISHED,
 		Data: stat.ProcessStat{
-			Duration:   time.Since(start),
-			UserTime:   ps.UserTime(),
-			SystemTime: ps.SystemTime(),
+			Duration:   stat.Millisecond(time.Since(start).Milliseconds()),
+			UserTime:   stat.Millisecond(ps.UserTime().Milliseconds()),
+			SystemTime: stat.Millisecond(ps.SystemTime().Milliseconds()),
 			ExitStatus: ps.ExitCode(),
 		},
 	})

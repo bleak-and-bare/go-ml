@@ -24,26 +24,19 @@ export function Sidebar(): ReactElement {
             }
             const data: { folders: string[] } = await res.json()
             return data.folders
-        } catch (e) {
-            // TODO : display error
-            console.error("weehoo : " + e)
         } finally {
             setLoading(false)
         }
-        return []
     }
 
     const abortExecution = () => {
-        setExecStatus(ExecStatus.STOPPED)
         ws.send(JSON.stringify({ type: "abort" }))
     }
 
     const resumeOrRunExec = () => {
         if (execStatus === ExecStatus.PAUSED) {
-            setExecStatus(ExecStatus.RUNNING)
             ws.send(JSON.stringify({ type: "resume" }))
         } else if (curFolder.length > 0) {
-            setExecStatus(ExecStatus.RUNNING)
             ws.send(JSON.stringify({
                 type: "execute",
                 data: curFolder
@@ -54,18 +47,29 @@ export function Sidebar(): ReactElement {
     }
 
     const pauseExecution = () => {
-        setExecStatus(ExecStatus.PAUSED)
         ws.send(JSON.stringify({ type: "pause" }))
     }
 
     const msgHandler = (msgStr: string) => {
         try {
             const msg: Message = JSON.parse(msgStr)
-            console.log(msg)
             switch (msg.type) {
                 case "exec_finished":
                     setExecStatus(ExecStatus.STOPPED)
-                    console.log(msg.data)
+                    break
+                case "fulfilled":
+                    switch (msg.data) {
+                        case "execute":
+                        case "resume":
+                            setExecStatus(ExecStatus.RUNNING)
+                            break
+                        case "abort":
+                            setExecStatus(ExecStatus.STOPPED)
+                            break
+                        case "pause":
+                            setExecStatus(ExecStatus.PAUSED)
+                            break
+                    }
                     break
             }
         } catch (e) {
@@ -74,14 +78,13 @@ export function Sidebar(): ReactElement {
     }
 
     useEffect(() => {
-        fetchPlayground().then(playground => setPlayground(playground))
-        const unsubscribe = ws.addSubscriber(msgHandler)
-        return unsubscribe
-    }, [])
-
-    useEffect(() => {
         if (!ws.isConnected) {
             setExecStatus(ExecStatus.STOPPED)
+        } else {
+            fetchPlayground()
+                .then(playground => setPlayground(playground))
+                .catch(e => console.error(`ERROR fetchPlayground : ${e}`))
+            return ws.addSubscriber(msgHandler)
         }
     }, [ws.isConnected])
 
@@ -112,6 +115,7 @@ export function Sidebar(): ReactElement {
                 label="Select program to run"
                 placeholder="Type folder name"
                 selectFirstOptionOnChange
+                allowDeselect={false}
                 data={playground}
                 onSearchChange={setCurFolder}
                 disabled={!ws.isConnected || execStatus !== ExecStatus.STOPPED}

@@ -19,7 +19,7 @@ import (
 
 func main() {
 	ds := dataset.NewDataSet[float32](7)
-	if err := ds.LoadCsv("../examples/dataset/Raisin_Dataset.csv", ','); err != nil {
+	if err := ds.LoadCsv("../../examples/dataset/Raisin_Dataset.csv", ','); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load dataset : %v", err)
 		return
 	}
