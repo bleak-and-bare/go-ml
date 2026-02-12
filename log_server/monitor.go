@@ -6,6 +6,7 @@ import (
 
 	"github.com/bleak-and-bare/go-ml/log_server/stat"
 	"github.com/bleak-and-bare/go-ml/log_server/ws"
+	"github.com/bleak-and-bare/go-ml/message"
 )
 
 func monitor_processes(c *ws.Client, dt time.Duration) {
@@ -20,8 +21,8 @@ func monitor_processes(c *ws.Client, dt time.Duration) {
 		err = mem_err
 
 		if err == nil {
-			msg_bytes, _ := json.Marshal(ws.Message{
-				Type: ws.STATS,
+			msg_bytes, _ := json.Marshal(message.Message{
+				Type: message.STATS,
 				Data: stat.NewStat(cpu, mem, dt),
 			})
 
@@ -33,8 +34,8 @@ func monitor_processes(c *ws.Client, dt time.Duration) {
 	}
 
 	if err != nil {
-		err_bytes, _ := json.Marshal(ws.Message{
-			Type: ws.ERROR,
+		err_bytes, _ := json.Marshal(message.Message{
+			Type: message.ERROR,
 			Data: err.Error(),
 		})
 

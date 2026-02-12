@@ -14,6 +14,7 @@ import (
 
 	"github.com/bleak-and-bare/go-ml/log_server/stat"
 	"github.com/bleak-and-bare/go-ml/log_server/ws"
+	"github.com/bleak-and-bare/go-ml/message"
 )
 
 func CreateGoRunCmd(folder string) (*exec.Cmd, error) {
@@ -40,8 +41,8 @@ func CreateGoRunCmd(folder string) (*exec.Cmd, error) {
 }
 
 func send_info_to_client(client *ws.Client, msg string) {
-	msg_bytes, _ := json.Marshal(ws.Message{
-		Type: ws.INFO,
+	msg_bytes, _ := json.Marshal(message.Message{
+		Type: message.INFO,
 		Data: msg,
 	})
 
@@ -52,8 +53,8 @@ func send_info_to_client(client *ws.Client, msg string) {
 }
 
 func send_error_to_client(client *ws.Client, err error) {
-	err_bytes, _ := json.Marshal(ws.Message{
-		Type: ws.ERROR,
+	err_bytes, _ := json.Marshal(message.Message{
+		Type: message.ERROR,
 		Data: err.Error(),
 	})
 
@@ -63,9 +64,9 @@ func send_error_to_client(client *ws.Client, err error) {
 	}
 }
 
-func notify_req_fulfilled_to_client(req ws.MessageType, client *ws.Client) {
-	msg_bytes, _ := json.Marshal(ws.Message{
-		Type: ws.FULFILLED,
+func notify_req_fulfilled_to_client(req message.MessageType, client *ws.Client) {
+	msg_bytes, _ := json.Marshal(message.Message{
+		Type: message.FULFILLED,
 		Data: req,
 	})
 
@@ -79,8 +80,8 @@ func notify_exec_finished_to_client(start time.Time, client *ws.Client) {
 	exec_cmd := client.GetExecCmd()
 	ps := exec_cmd.ProcessState
 
-	msg_bytes, _ := json.Marshal(ws.Message{
-		Type: ws.EXEC_FINISHED,
+	msg_bytes, _ := json.Marshal(message.Message{
+		Type: message.EXEC_FINISHED,
 		Data: stat.ProcessStat{
 			Duration:   stat.Millisecond(time.Since(start).Milliseconds()),
 			UserTime:   stat.Millisecond(ps.UserTime().Milliseconds()),

@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bleak-and-bare/go-ml/message"
 	"github.com/gorilla/websocket"
 )
 
@@ -66,8 +67,8 @@ func (c *Client) Unregister(cmd chan<- Command) {
 	if c.cmd != nil {
 		cmd <- Command{
 			Client: c,
-			Message: Message{
-				Type: ABORT,
+			Message: message.Message{
+				Type: message.ABORT,
 			},
 		}
 	}
@@ -98,10 +99,10 @@ func (c *Client) ReadPump(cmd chan<- Command) {
 		}
 		// msg = bytes.TrimSpace(bytes.ReplaceAll(msg, new_line, space))
 
-		var m Message
+		var m message.Message
 		if err := json.Unmarshal(msg, &m); err != nil {
-			err_bytes, _ := json.Marshal(Message{
-				Type: ERROR,
+			err_bytes, _ := json.Marshal(message.Message{
+				Type: message.ERROR,
 				Data: err.Error(),
 			})
 			c.send <- err_bytes

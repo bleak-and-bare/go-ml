@@ -4,5 +4,6 @@ use (
 	./examples
 	./log_server
 	./machine_learning
+	./message
 	./playground
 )

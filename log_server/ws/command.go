@@ -1,6 +1,8 @@
 package ws
 
+import "github.com/bleak-and-bare/go-ml/message"
+
 type Command struct {
-	Message
+	message.Message
 	Client *Client
 }

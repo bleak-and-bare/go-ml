@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bleak-and-bare/go-ml/log_server/ws"
+	"github.com/bleak-and-bare/go-ml/message"
 )
 
 type CmdController struct {
@@ -24,7 +25,7 @@ func (c *CmdController) Commands() chan<- ws.Command {
 func (c *CmdController) Run() {
 	for cmd := range c.cmds {
 		switch cmd.Type {
-		case ws.EXECUTE:
+		case message.EXECUTE:
 			if cmd.Client.GetExecCmd() != nil {
 				send_error_to_client(cmd.Client, fmt.Errorf("You can only run one process"))
 				continue
@@ -75,7 +76,7 @@ func (c *CmdController) Run() {
 
 			notify_req_fulfilled_to_client(cmd.Type, cmd.Client)
 
-		case ws.ABORT:
+		case message.ABORT:
 			exec_cmd := cmd.Client.GetExecCmd()
 			if exec_cmd == nil {
 				fmt.Fprintf(os.Stderr, "CmdController.Run : %p didn't spawn any process\n", cmd.Client)
@@ -102,7 +103,7 @@ func (c *CmdController) Run() {
 
 			notify_req_fulfilled_to_client(cmd.Type, cmd.Client)
 
-		case ws.PAUSE:
+		case message.PAUSE:
 			exec_cmd := cmd.Client.GetExecCmd()
 			if exec_cmd == nil {
 				fmt.Fprintf(os.Stderr, "CmdController.Run : %p didn't spawn any process\n", cmd.Client)
@@ -120,7 +121,7 @@ func (c *CmdController) Run() {
 
 			notify_req_fulfilled_to_client(cmd.Type, cmd.Client)
 
-		case ws.RESUME:
+		case message.RESUME:
 			exec_cmd := cmd.Client.GetExecCmd()
 			if exec_cmd == nil {
 				fmt.Fprintf(os.Stderr, "CmdController.Run : %p didn't spawn any process\n", cmd.Client)
