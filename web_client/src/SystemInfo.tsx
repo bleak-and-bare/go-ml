@@ -67,7 +67,7 @@ export function SystemInfo({ execStatus, curFolder }: { execStatus: ExecStatus, 
             }
         </Transition>
         {execStatus !== ExecStatus.STOPPED ? (
-            <Paper withBorder p="xs" shadow="md" styles={{ root: { fontFamily: "monospace" } }}>
+            <Paper withBorder p="xs" styles={{ root: { fontFamily: "monospace" } }}>
                 {cpuUsage !== null ? <Text fz="sm">CPU Usage : {Math.round(cpuUsage)}%</Text> : <></>}
                 {stats ? <>
                     <Text fz="sm">User usage : {Math.round(stats.process.user)}ms</Text>

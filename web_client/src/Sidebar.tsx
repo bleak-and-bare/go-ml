@@ -1,13 +1,19 @@
-import { ActionIcon, Divider, Group, Loader, Select, Stack, Text, ThemeIcon, Title } from "@mantine/core"
-import { IconLink, IconPlayerPause, IconPlayerPlay, IconRotateClockwise, IconUnlink, IconX } from "@tabler/icons-react"
-import { useState, useEffect, type ReactElement } from "react"
+import { ActionIcon, Button, Divider, Group, Loader, MultiSelect, Select, Stack, Text, ThemeIcon, Title } from "@mantine/core"
+import { IconLink, IconPlayerPause, IconPlayerPlay, IconRotateClockwise, IconTrash, IconUnlink, IconX } from "@tabler/icons-react"
+import { useState, useEffect, type ReactElement, Dispatch, SetStateAction } from "react"
 import { useWebSocket } from "./WebSocketContext"
 import ExecStatus from "./ExecStatus"
 import { Message } from "./Message"
 import { notifications } from "@mantine/notifications"
 import { SystemInfo } from "./SystemInfo"
+import { AllLogType, LogType } from "./LogType"
 
-export function Sidebar(): ReactElement {
+type SidebarProps = {
+    clearLogs: () => void,
+    setLogFilter: Dispatch<SetStateAction<Record<LogType, boolean>>>
+}
+
+export function Sidebar({ clearLogs, setLogFilter }: SidebarProps): ReactElement {
     const ws = useWebSocket()
     const [playground, setPlayground] = useState<string[]>([])
     const [loading, setLoading] = useState(true)
@@ -128,5 +134,17 @@ export function Sidebar(): ReactElement {
         </Group>
         <Divider size="xs" variant="dotted" />
         <SystemInfo execStatus={execStatus} curFolder={curFolder} />
+        <MultiSelect
+            label="Select log filters"
+            placeholder="Select what to show"
+            data={AllLogType}
+            defaultValue={AllLogType}
+            onChange={logs => setLogFilter(filter => {
+                for (const log in filter) filter[log as LogType] = logs.includes(log)
+                return { ...filter }
+            })}
+            clearable
+        />
+        <Button leftSection={<IconTrash size={16} />} variant="light" onClick={clearLogs}>Clear all logs</Button>
     </Stack>
 }

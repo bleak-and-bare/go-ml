@@ -12,7 +12,7 @@ type Message struct {
 }
 
 func main() {
-	for i := range 3 {
+	for i := range 200 {
 		msg, _ := json.Marshal(Message{
 			Type: "info",
 			Data: i,
