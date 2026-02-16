@@ -6,6 +6,8 @@ const (
 	EXECUTE       MessageType = "execute"
 	ABORT         MessageType = "abort"
 	INFO          MessageType = "info"
+	PROGRESS      MessageType = "progress"
+	TABLE         MessageType = "table"
 	ERROR         MessageType = "error"
 	FULFILLED     MessageType = "fulfilled"
 	PAUSE         MessageType = "pause"

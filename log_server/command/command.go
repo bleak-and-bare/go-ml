@@ -2,13 +2,13 @@ package command
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"syscall"
 	"time"
 
@@ -96,11 +96,18 @@ func notify_exec_finished_to_client(start time.Time, client *ws.Client) {
 	}
 }
 
-func stream_frame(r io.Reader, f func([]byte)) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := slices.Clone(scanner.Bytes())
-		f(line)
+func send_frame_to_client(bytes []byte, client *ws.Client, msg_type message.MessageType) {
+	var msg message.Message
+	if err := json.Unmarshal(bytes, &msg); err != nil {
+		msg.Type = msg_type
+		msg.Data = string(bytes)
+	}
+
+	b, _ := json.Marshal(msg)
+
+	select {
+	case <-client.Context().Done():
+	case client.Send() <- b:
 	}
 }
 
@@ -115,8 +122,23 @@ func stream_output(cmd *exec.Cmd, client *ws.Client) error {
 		return err
 	}
 
-	go stream_frame(stdio, func(b []byte) { client.Send() <- b })
-	go stream_frame(stderr, func(b []byte) { client.Send() <- b })
+	go func() {
+		scanner := bufio.NewScanner(stdio)
+		for scanner.Scan() {
+			send_frame_to_client(scanner.Bytes(), client, message.INFO)
+		}
+	}()
+
+	go func() {
+		var buf bytes.Buffer
+		_, err := io.Copy(&buf, stderr)
+		if err != nil {
+			send_error_to_client(client, err)
+			return
+		}
+
+		send_frame_to_client(buf.Bytes(), client, message.ERROR)
+	}()
 
 	return nil
 }

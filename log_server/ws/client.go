@@ -13,11 +13,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var (
-	new_line = []byte{'\n'}
-	// space    = []byte{' '}
-)
-
 type Client struct {
 	hub           *Hub
 	conn          *websocket.Conn
@@ -105,7 +100,12 @@ func (c *Client) ReadPump(cmd chan<- Command) {
 				Type: message.ERROR,
 				Data: err.Error(),
 			})
-			c.send <- err_bytes
+
+			select {
+			case <-c.ctx.Done():
+			case c.send <- err_bytes:
+			}
+
 			continue
 		}
 
@@ -138,23 +138,24 @@ func (c *Client) WritePump() {
 				fmt.Fprintf(os.Stderr, "Client.WritePump : failed to get writer %v\n", err)
 				return
 			}
+
 			w.Write(msg)
 
-		msg_drain:
-			for {
-				select {
-				case msg, ok := <-c.send:
-					if !ok {
-						break msg_drain
-					}
-
-					w.Write(new_line)
-					w.Write(msg)
-
-				default:
-					break msg_drain
-				}
-			}
+			// msg_drain:
+			// 	for {
+			// 		select {
+			// 		case <-c.ctx.Done():
+			// 		case msg, ok := <-c.send:
+			// 			if !ok {
+			// 				break msg_drain
+			// 			}
+			//
+			// 			w.Write(msg)
+			//
+			// 		default:
+			// 			break msg_drain
+			// 		}
+			// 	}
 
 			if err := w.Close(); err != nil {
 				fmt.Fprintf(os.Stderr, "Client.WritePump : failed to close writer %v\n", err)

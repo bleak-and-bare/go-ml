@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Divider, Text } from "@mantine/core"
+import { Box, Divider, Text } from "@mantine/core"
 import { Message } from "./Message"
 import { useWebSocket } from "./WebSocketContext"
 import { AllLogType, LogType } from "./LogType";
@@ -28,10 +28,11 @@ function Main({ logFilter, clearLogs }: MainProps) {
     const msgHandler = (data: string) => {
         try {
             const msg: Message = JSON.parse(data)
-            if (msg.type === "exec_finished" || AllLogType.includes(msg.type as LogType))
+            if (msg.type === "exec_finished"
+                || AllLogType.includes(msg.type as LogType))
                 setMessages(messages => [...messages, msg])
         } catch (e) {
-            setMessages(messages => [...messages, { type: "info", data }])
+            setMessages(messages => [...messages, { type: "error", data }])
             // console.error(`Main.msgHandler : ${e}`)
         }
     }
@@ -55,15 +56,18 @@ function MessageItem({ message }: { message: Message }) {
         case "info":
             return <Text>{message.data}</Text>
         case "error":
-            return <>
+            return message.data.length === 0 ? <></> : <>
                 <Divider color="red" my="xs" variant="dotted" />
-                <Text fz="sm" style={(theme) => ({
+                <Box style={(theme) => ({
                     backgroundColor: theme.colors.red[3],
                     color: theme.colors.red[9],
                     padding: '2px 6px',
                     borderRadius: 4,
                     display: 'inline-block',
-                })}>{message.data}</Text>
+                })}>
+                    {message.data.split('\n').filter(line => line.length > 0).map(line =>
+                        <Text fz="sm">{line}</Text>)}
+                </Box>
             </>
         case "exec_finished":
             return <Divider variant="dotted" my="sm" />
