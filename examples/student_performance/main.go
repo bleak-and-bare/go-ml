@@ -38,7 +38,7 @@ func main() {
 			std_scaler.TransformDataSet(test, col)
 		}
 	}
-	test.Head(5)
+	test.Head(5, "Student perrformance train dataset", true)
 
 	m := linear.NewLinearReg[float32]()
 	if err := m.Fit(train); err != nil {

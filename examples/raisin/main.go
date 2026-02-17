@@ -49,7 +49,7 @@ func main() {
 		}
 	}
 
-	train.Head(5)
+	train.Head(5, "Raisin train dataset", true)
 
 	m := linear.NewLogisticReg[float32]()
 	m.Penalty = regularization.Ridge
