@@ -38,7 +38,6 @@ export function SystemInfo({ execStatus, curFolder }: { execStatus: ExecStatus, 
                     })
                     break
                 case "exec_finished":
-                    console.log(msg.data)
                     setExecStats(msg.data)
                     break
             }

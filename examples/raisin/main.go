@@ -96,5 +96,5 @@ func main() {
 		pred[i] = int(math.Round(float64(r[i])))
 	}
 
-	classification.ComputeReport(trg, pred)
+	classification.ComputeReport(trg, pred, true)
 }

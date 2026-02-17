@@ -4,15 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
 	"time"
 
-	"github.com/bleak-and-bare/go-ml/log_server/stat"
 	"github.com/bleak-and-bare/go-ml/log_server/ws"
 	"github.com/bleak-and-bare/go-ml/message"
 )
@@ -41,10 +42,7 @@ func CreateGoRunCmd(folder string) (*exec.Cmd, error) {
 }
 
 func send_info_to_client(client *ws.Client, msg string) {
-	msg_bytes, _ := json.Marshal(message.Message{
-		Type: message.INFO,
-		Data: msg,
-	})
+	msg_bytes, _ := json.Marshal(msg)
 
 	select {
 	case <-client.Context().Done():
@@ -53,10 +51,7 @@ func send_info_to_client(client *ws.Client, msg string) {
 }
 
 func send_error_to_client(client *ws.Client, err error) {
-	err_bytes, _ := json.Marshal(message.Message{
-		Type: message.ERROR,
-		Data: err.Error(),
-	})
+	err_bytes, _ := json.Marshal(message.NewError(err.Error(), true))
 
 	select {
 	case <-client.Context().Done():
@@ -65,10 +60,7 @@ func send_error_to_client(client *ws.Client, err error) {
 }
 
 func notify_req_fulfilled_to_client(req message.MessageType, client *ws.Client) {
-	msg_bytes, _ := json.Marshal(message.Message{
-		Type: message.FULFILLED,
-		Data: req,
-	})
+	msg_bytes, _ := json.Marshal(message.NewFulfilled(req))
 
 	select {
 	case <-client.Context().Done():
@@ -80,15 +72,12 @@ func notify_exec_finished_to_client(start time.Time, client *ws.Client) {
 	exec_cmd := client.GetExecCmd()
 	ps := exec_cmd.ProcessState
 
-	msg_bytes, _ := json.Marshal(message.Message{
-		Type: message.EXEC_FINISHED,
-		Data: stat.ProcessStat{
-			Duration:   stat.Millisecond(time.Since(start).Milliseconds()),
-			UserTime:   stat.Millisecond(ps.UserTime().Milliseconds()),
-			SystemTime: stat.Millisecond(ps.SystemTime().Milliseconds()),
-			ExitStatus: ps.ExitCode(),
-		},
-	})
+	msg_bytes, _ := json.Marshal(message.NewExecFinished(message.ProcessStat{
+		Duration:   time.Since(start).Milliseconds(),
+		UserTime:   ps.UserTime().Milliseconds(),
+		SystemTime: ps.SystemTime().Milliseconds(),
+		ExitStatus: ps.ExitCode(),
+	}))
 
 	select {
 	case <-client.Context().Done():
@@ -96,11 +85,19 @@ func notify_exec_finished_to_client(start time.Time, client *ws.Client) {
 	}
 }
 
-func send_frame_to_client(bytes []byte, client *ws.Client, msg_type message.MessageType) {
+func send_frame_to_client(bytes []byte, client *ws.Client, info bool) {
+	if len(bytes) == 0 {
+		return
+	}
+
 	var msg message.Message
+
 	if err := json.Unmarshal(bytes, &msg); err != nil {
-		msg.Type = msg_type
-		msg.Data = string(bytes)
+		if info {
+			msg = message.NewInfo(string(bytes))
+		} else {
+			msg = message.NewError(string(bytes), false)
+		}
 	}
 
 	b, _ := json.Marshal(msg)
@@ -125,19 +122,24 @@ func stream_output(cmd *exec.Cmd, client *ws.Client) error {
 	go func() {
 		scanner := bufio.NewScanner(stdio)
 		for scanner.Scan() {
-			send_frame_to_client(scanner.Bytes(), client, message.INFO)
+			if err := scanner.Err(); err != nil && !errors.Is(err, fs.ErrClosed) {
+				send_error_to_client(client, err)
+				return
+			}
+
+			send_frame_to_client(scanner.Bytes(), client, true)
 		}
 	}()
 
 	go func() {
 		var buf bytes.Buffer
 		_, err := io.Copy(&buf, stderr)
-		if err != nil {
+		if err != nil && !errors.Is(err, fs.ErrClosed) {
 			send_error_to_client(client, err)
 			return
 		}
 
-		send_frame_to_client(buf.Bytes(), client, message.ERROR)
+		send_frame_to_client(buf.Bytes(), client, false)
 	}()
 
 	return nil

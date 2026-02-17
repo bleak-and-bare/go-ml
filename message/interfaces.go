@@ -11,15 +11,20 @@ func print_msg(msg Message) {
 }
 
 func Info(msg string) {
-	print_msg(Message{
-		Type: INFO,
-		Data: msg,
-	})
+	print_msg(NewInfo(msg))
 }
 
-func Error(msg string) {
+func Errorf(with_stack_frame bool, format string, values ...any) {
+	Error(fmt.Sprintf(format, values...), with_stack_frame)
+}
+
+func Error(msg string, with_stack_frame bool) {
+	print_msg(NewError(msg, with_stack_frame))
+}
+
+func Table(table TableStruct) {
 	print_msg(Message{
-		Type: ERROR,
-		Data: msg,
+		Type: TABLE,
+		Data: table,
 	})
 }

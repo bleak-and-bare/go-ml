@@ -15,6 +15,7 @@ import (
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/iterable"
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/maths/stat"
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/misc"
+	"github.com/bleak-and-bare/go-ml/message"
 	"golang.org/x/exp/constraints"
 )
 
@@ -279,44 +280,91 @@ func (ds *DataSet[T]) Empty() bool {
 	return ds.Size() == 0
 }
 
-func (ds *DataSet[T]) Head(max uint32) {
+func (ds *DataSet[T]) head(max uint32, caption string, headless bool) {
 	if ds.datas == nil || max == 0 {
 		return
 	}
 
-	p := misc.GridPrinter{
-		Tab: "  ",
-	}
-
-	for _, h := range ds.headers {
-		if h.used {
-			p.Column(h.name)
+	if headless {
+		p := misc.GridPrinter{
+			Tab: "  ",
 		}
-	}
 
-	max_bound := ds.max_bound()
-	for i := ds.min_bound(); i < max_bound && max > 0; i, max = i+1, max-1 {
-		p.NewRow()
-		for j, h := range ds.headers {
-			if !h.used {
-				continue
-			}
-
-			col := ds.at(i, j)
-			switch c := col.(type) {
-			case *RealDataCell[T]:
-				p.Column(fmt.Sprintf("%.3f", c.Value))
-			case *StrDataCell:
-				p.Column(c.Value)
+		for _, h := range ds.headers {
+			if h.used {
+				p.Column(h.name)
 			}
 		}
-	}
 
-	p.Print(true)
+		max_bound := ds.max_bound()
+		for i := ds.min_bound(); i < max_bound && max > 0; i, max = i+1, max-1 {
+			p.NewRow()
+			for j, h := range ds.headers {
+				if !h.used {
+					continue
+				}
+
+				col := ds.at(i, j)
+				switch c := col.(type) {
+				case *RealDataCell[T]:
+					p.Column(fmt.Sprintf("%.3f", c.Value))
+				case *StrDataCell:
+					p.Column(c.Value)
+				}
+			}
+		}
+
+		fmt.Println(caption)
+		p.Print(true)
+	} else {
+		table := message.TableStruct{
+			Caption: caption,
+		}
+
+		for _, h := range ds.headers {
+			if h.used {
+				table.Head = append(table.Head, h.name)
+			}
+		}
+
+		max_bound := ds.max_bound()
+		for i := ds.min_bound(); i < max_bound && max > 0; i, max = i+1, max-1 {
+			k := 0
+			row := make([]string, len(table.Head))
+
+			for j, h := range ds.headers {
+				if !h.used {
+					continue
+				}
+
+				col := ds.at(i, j)
+				switch c := col.(type) {
+				case *RealDataCell[T]:
+					row[k] = fmt.Sprintf("%.3f", c.Value)
+				case *StrDataCell:
+					row[k] = c.Value
+				}
+
+				k++
+			}
+
+			table.Body = append(table.Body, row)
+		}
+
+		message.Table(table)
+	}
 }
 
-func (ds *DataSet[T]) Dump() {
-	ds.Head(ds.raw_count())
+func (ds *DataSet[T]) Head(max uint32, caption string, headless bool) {
+	const MaxRows = 30
+	if max > MaxRows {
+		max = MaxRows
+	}
+	ds.head(max, caption, headless)
+}
+
+func (ds *DataSet[T]) Dump(caption string) {
+	ds.head(ds.raw_count(), caption, true)
 }
 
 func (ds *DataSet[T]) LoadCsvReader(input_reader io.Reader, delim rune) error {

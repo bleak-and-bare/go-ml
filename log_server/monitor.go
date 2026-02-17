@@ -21,10 +21,17 @@ func monitor_processes(c *ws.Client, dt time.Duration) {
 		err = mem_err
 
 		if err == nil {
-			msg_bytes, _ := json.Marshal(message.Message{
-				Type: message.STATS,
-				Data: stat.NewStat(cpu, mem, dt),
-			})
+			stats := stat.NewStat(cpu, mem, dt)
+			msg_bytes, _ := json.Marshal(message.NewStats(message.StatStruct{
+				Process: message.ProcessInfos{
+					User:   int64(stats.Process.User),
+					System: int64(stats.Process.System),
+				},
+				Global:  int64(stats.Global),
+				RSS:     stats.RSS,
+				PeakRSS: stats.PeakRSS,
+				Delta:   int64(stats.Delta),
+			}))
 
 			select {
 			case <-c.Context().Done():
@@ -34,10 +41,7 @@ func monitor_processes(c *ws.Client, dt time.Duration) {
 	}
 
 	if err != nil {
-		err_bytes, _ := json.Marshal(message.Message{
-			Type: message.ERROR,
-			Data: err.Error(),
-		})
+		err_bytes, _ := json.Marshal(message.NewError(err.Error(), false))
 
 		select {
 		case <-c.Context().Done():

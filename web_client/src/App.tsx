@@ -16,7 +16,8 @@ export default function App() {
     const [clearLogs, setClearLogs] = useState(false)
     const [logFilter, setLogFilter] = useState<Record<LogType, boolean>>({
         error: true,
-        info: true
+        info: true,
+        table: true
     })
 
     return <MantineProvider

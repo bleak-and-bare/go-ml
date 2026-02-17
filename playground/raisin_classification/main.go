@@ -15,12 +15,13 @@ import (
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/selector"
 	"github.com/bleak-and-bare/go-ml/machine_learning/processing"
 	"github.com/bleak-and-bare/go-ml/machine_learning/regression/linear"
+	"github.com/bleak-and-bare/go-ml/message"
 )
 
 func main() {
 	ds := dataset.NewDataSet[float32](7)
 	if err := ds.LoadCsv("../../examples/dataset/Raisin_Dataset.csv", ','); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load dataset : %v", err)
+		message.Errorf(true, "Failed to load dataset: %v", err)
 		return
 	}
 
@@ -46,7 +47,7 @@ func main() {
 		}
 	}
 
-	train.Head(5)
+	train.Head(5, "Raisin train dataset", false)
 
 	m := linear.NewLogisticReg[float32]()
 	m.Penalty = regularization.Ridge
@@ -93,5 +94,5 @@ func main() {
 		pred[i] = int(math.Round(float64(r[i])))
 	}
 
-	classification.ComputeReport(trg, pred)
+	classification.ComputeReport(trg, pred, false)
 }

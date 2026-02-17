@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/misc"
+	"github.com/bleak-and-bare/go-ml/message"
 )
 
 type ClassMetrics struct {
@@ -26,49 +27,86 @@ type counts struct {
 	TP, FP, FN int
 }
 
-func ComputeReport(trg, pred []int) ClassificationReport {
+func ComputeReport(trg, pred []int, headless bool) ClassificationReport {
 	counts := computeCounts(trg, pred)
 	report := computeMetrics(counts)
 
-	grid := misc.GridPrinter{
-		Tab: "  ",
-	}
-	headers := []string{"class", "precision", "recall", "f1-score", "support"}
-	for _, h := range headers {
-		grid.Column(h)
-	}
+	if headless {
+		grid := misc.GridPrinter{
+			Tab: "  ",
+		}
+		headers := []string{"class", "precision", "recall", "f1-score", "support"}
+		for _, h := range headers {
+			grid.Column(h)
+		}
 
-	for label, m := range report.PerClass {
+		for label, m := range report.PerClass {
+			grid.NewRow()
+			grid.Columns(
+				strconv.Itoa(label),
+				fmt.Sprintf("%.3f", m.Precision),
+
+				fmt.Sprintf("%.3f", m.Recall),
+				fmt.Sprintf("%.3f", m.F1),
+				strconv.Itoa(m.Support),
+			)
+		}
+
+		grid.NewEmptyRow()
 		grid.NewRow()
+		grid.Column("macro avg")
 		grid.Columns(
-			strconv.Itoa(label),
-			fmt.Sprintf("%.3f", m.Precision),
-
-			fmt.Sprintf("%.3f", m.Recall),
-			fmt.Sprintf("%.3f", m.F1),
-			strconv.Itoa(m.Support),
+			fmt.Sprintf("%.3f", report.MacroAvg.Precision),
+			fmt.Sprintf("%.3f", report.MacroAvg.Recall),
+			fmt.Sprintf("%.3f", report.MacroAvg.F1),
+			strconv.Itoa(report.MacroAvg.Support),
 		)
+
+		grid.NewRow()
+		grid.Column("weighted avg")
+		grid.Columns(
+			fmt.Sprintf("%.3f", report.WeightedAvg.Precision),
+			fmt.Sprintf("%.3f", report.WeightedAvg.Recall),
+			fmt.Sprintf("%.3f", report.WeightedAvg.F1),
+			strconv.Itoa(report.WeightedAvg.Support),
+		)
+
+		grid.Print(true)
+	} else {
+		table := message.TableStruct{
+			Caption: "Classification report",
+			Head:    []string{"class", "precision", "recall", "f1-score", "support"},
+		}
+
+		for label, m := range report.PerClass {
+			table.Body = append(table.Body, []string{
+				strconv.Itoa(label),
+				fmt.Sprintf("%.3f", m.Precision),
+
+				fmt.Sprintf("%.3f", m.Recall),
+				fmt.Sprintf("%.3f", m.F1),
+				strconv.Itoa(m.Support),
+			})
+		}
+
+		table.Body = append(table.Body, []string{
+			"macro avg",
+			fmt.Sprintf("%.3f", report.MacroAvg.Precision),
+			fmt.Sprintf("%.3f", report.MacroAvg.Recall),
+			fmt.Sprintf("%.3f", report.MacroAvg.F1),
+			strconv.Itoa(report.MacroAvg.Support),
+		})
+
+		table.Body = append(table.Body, []string{
+			"weighted avg",
+			fmt.Sprintf("%.3f", report.WeightedAvg.Precision),
+			fmt.Sprintf("%.3f", report.WeightedAvg.Recall),
+			fmt.Sprintf("%.3f", report.WeightedAvg.F1),
+			strconv.Itoa(report.WeightedAvg.Support),
+		})
+
+		message.Table(table)
 	}
-
-	grid.NewEmptyRow()
-	grid.NewRow()
-	grid.Column("macro avg")
-	grid.Columns(
-		fmt.Sprintf("%.3f", report.MacroAvg.Precision),
-		fmt.Sprintf("%.3f", report.MacroAvg.Recall),
-		fmt.Sprintf("%.3f", report.MacroAvg.F1),
-		strconv.Itoa(report.MacroAvg.Support),
-	)
-
-	grid.NewRow()
-	grid.Column("weighted avg")
-	grid.Columns(
-		fmt.Sprintf("%.3f", report.WeightedAvg.Precision),
-		fmt.Sprintf("%.3f", report.WeightedAvg.Recall),
-		fmt.Sprintf("%.3f", report.WeightedAvg.F1),
-		strconv.Itoa(report.WeightedAvg.Support),
-	)
-	grid.Print(true)
 
 	return report
 }

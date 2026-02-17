@@ -4,8 +4,14 @@ type CPUStat = {
 }
 
 type Message = {
-    type: "execute" | "info" | "error",
+    type: "execute" | "info",
     data: string,
+} | {
+    type: "error",
+    data: {
+        stack_frame?: string,
+        error: string
+    }
 } | {
     type: "abort" | "pause" | "resume"
 } | {
@@ -28,6 +34,13 @@ type Message = {
 } | {
     type: "fulfilled",
     data: Exclude<Message["type"], "fulfilled">
+} | {
+    type: "table",
+    data: {
+        caption: string,
+        head: string[],
+        body: string[][]
+    }
 }
 
 type MessageType = Message["type"]

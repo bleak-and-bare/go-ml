@@ -61,10 +61,8 @@ func (c *Client) Unregister(cmd chan<- Command) {
 	c.cancel()
 	if c.cmd != nil {
 		cmd <- Command{
-			Client: c,
-			Message: message.Message{
-				Type: message.ABORT,
-			},
+			Client:  c,
+			Message: message.NewAbort(),
 		}
 	}
 
@@ -96,10 +94,7 @@ func (c *Client) ReadPump(cmd chan<- Command) {
 
 		var m message.Message
 		if err := json.Unmarshal(msg, &m); err != nil {
-			err_bytes, _ := json.Marshal(message.Message{
-				Type: message.ERROR,
-				Data: err.Error(),
-			})
+			err_bytes, _ := json.Marshal(message.NewError(err.Error(), false))
 
 			select {
 			case <-c.ctx.Done():

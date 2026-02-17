@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Box, Divider, Text } from "@mantine/core"
+import { alpha, Box, Divider, Table, Text } from "@mantine/core"
 import { Message } from "./Message"
 import { useWebSocket } from "./WebSocketContext"
 import { AllLogType, LogType } from "./LogType";
@@ -32,7 +32,7 @@ function Main({ logFilter, clearLogs }: MainProps) {
                 || AllLogType.includes(msg.type as LogType))
                 setMessages(messages => [...messages, msg])
         } catch (e) {
-            setMessages(messages => [...messages, { type: "error", data }])
+            setMessages(messages => [...messages, { type: "error", data: { error: `${e}` } }])
             // console.error(`Main.msgHandler : ${e}`)
         }
     }
@@ -56,19 +56,26 @@ function MessageItem({ message }: { message: Message }) {
         case "info":
             return <Text>{message.data}</Text>
         case "error":
-            return message.data.length === 0 ? <></> : <>
+            return message.data.error.length === 0 ? <></> : <>
                 <Divider color="red" my="xs" variant="dotted" />
+                {message.data.stack_frame?.split('\n').filter(line => line.length > 0)
+                    .map((line, i) => <Text key={i} fz="xs" c="red" styles={{ root: { fontFamily: "monospace" } }}>{line}</Text>)}
+                {message.data.stack_frame ? <Text fz="xs" c="red" styles={{ root: { fontFamily: "monospace" } }}>...</Text> : <></>}
                 <Box style={(theme) => ({
-                    backgroundColor: theme.colors.red[3],
-                    color: theme.colors.red[9],
+                    backgroundColor: alpha(theme.colors.red[3], 0.3),
+                    color: theme.colors.red[3],
                     padding: '2px 6px',
                     borderRadius: 4,
                     display: 'inline-block',
                 })}>
-                    {message.data.split('\n').filter(line => line.length > 0).map(line =>
-                        <Text fz="sm">{line}</Text>)}
+                    {message.data.error.split('\n').filter(line => line.length > 0).map((line, i) =>
+                        <Text fz="sm" key={i}>{line}</Text>)}
                 </Box>
             </>
+        case "table":
+            return <Table.ScrollContainer minWidth={360}>
+                <Table data={message.data} />
+            </Table.ScrollContainer>
         case "exec_finished":
             return <Divider variant="dotted" my="sm" />
     }
