@@ -42,7 +42,7 @@ func CreateGoRunCmd(folder string) (*exec.Cmd, error) {
 }
 
 func send_info_to_client(client *ws.Client, msg string) {
-	msg_bytes, _ := json.Marshal(msg)
+	msg_bytes, _ := json.Marshal(message.NewInfo(msg))
 
 	select {
 	case <-client.Context().Done():

@@ -41,6 +41,13 @@ type Message = {
         head: string[],
         body: string[][]
     }
+} | {
+    type: "progress",
+    data: {
+        label: string,
+        value: number,
+        id: string
+    }
 }
 
 type MessageType = Message["type"]

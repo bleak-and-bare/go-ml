@@ -73,13 +73,10 @@ func ComputeReport(trg, pred []int, headless bool) ClassificationReport {
 
 		grid.Print(true)
 	} else {
-		table := message.TableStruct{
-			Caption: "Classification report",
-			Head:    []string{"class", "precision", "recall", "f1-score", "support"},
-		}
+		var body [][]string
 
 		for label, m := range report.PerClass {
-			table.Body = append(table.Body, []string{
+			body = append(body, []string{
 				strconv.Itoa(label),
 				fmt.Sprintf("%.3f", m.Precision),
 
@@ -89,7 +86,7 @@ func ComputeReport(trg, pred []int, headless bool) ClassificationReport {
 			})
 		}
 
-		table.Body = append(table.Body, []string{
+		body = append(body, []string{
 			"macro avg",
 			fmt.Sprintf("%.3f", report.MacroAvg.Precision),
 			fmt.Sprintf("%.3f", report.MacroAvg.Recall),
@@ -97,7 +94,7 @@ func ComputeReport(trg, pred []int, headless bool) ClassificationReport {
 			strconv.Itoa(report.MacroAvg.Support),
 		})
 
-		table.Body = append(table.Body, []string{
+		body = append(body, []string{
 			"weighted avg",
 			fmt.Sprintf("%.3f", report.WeightedAvg.Precision),
 			fmt.Sprintf("%.3f", report.WeightedAvg.Recall),
@@ -105,7 +102,11 @@ func ComputeReport(trg, pred []int, headless bool) ClassificationReport {
 			strconv.Itoa(report.WeightedAvg.Support),
 		})
 
-		message.Table(table)
+		message.Table(
+			"Classification report",
+			[]string{"class", "precision", "recall", "f1-score", "support"},
+			body,
+		)
 	}
 
 	return report

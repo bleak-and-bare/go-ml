@@ -1,12 +1,10 @@
 import { ActionIcon, Button, Divider, Group, Loader, MultiSelect, Select, Stack, Text, ThemeIcon, Title } from "@mantine/core"
 import { IconLink, IconPlayerPause, IconPlayerPlay, IconRotateClockwise, IconTrash, IconUnlink, IconX } from "@tabler/icons-react"
-import { useState, useEffect, type ReactElement, Dispatch, SetStateAction } from "react"
-import { useWebSocket } from "./WebSocketContext"
-import ExecStatus from "./ExecStatus"
-import { Message } from "./Message"
+import { useState, useEffect, type ReactElement, Dispatch, SetStateAction, useCallback } from "react"
+import { useWebSocket } from "../context/WebSocketContext"
+import { ExecStatus, Message, AllLogType, LogType } from "../@types/"
 import { notifications } from "@mantine/notifications"
-import { SystemInfo } from "./SystemInfo"
-import { AllLogType, LogType } from "./LogType"
+import { SystemInfo } from "../component"
 
 type SidebarProps = {
     clearLogs: () => void,
@@ -45,7 +43,7 @@ export function Sidebar({ clearLogs, setLogFilter }: SidebarProps): ReactElement
         } else if (curFolder.length > 0) {
             ws.send(JSON.stringify({
                 type: "execute",
-                data: curFolder
+                data: curFolder,
             }))
         } else {
             notifications.show({ color: 'red', title: 'No program to run', message: 'Select a program' })
@@ -56,7 +54,7 @@ export function Sidebar({ clearLogs, setLogFilter }: SidebarProps): ReactElement
         ws.send(JSON.stringify({ type: "pause" }))
     }
 
-    const msgHandler = (msgStr: string) => {
+    const msgHandler = useCallback((msgStr: string) => {
         try {
             const msg: Message = JSON.parse(msgStr)
             switch (msg.type) {
@@ -66,6 +64,13 @@ export function Sidebar({ clearLogs, setLogFilter }: SidebarProps): ReactElement
                 case "fulfilled":
                     switch (msg.data) {
                         case "execute":
+                            notifications.show({
+                                color: "indigo",
+                                title: curFolder,
+                                message: "Progam currently running"
+                            })
+                            setExecStatus(ExecStatus.RUNNING)
+                            break
                         case "resume":
                             setExecStatus(ExecStatus.RUNNING)
                             break
@@ -81,7 +86,7 @@ export function Sidebar({ clearLogs, setLogFilter }: SidebarProps): ReactElement
         } catch (e) {
             console.error(`Sidebar.msgHandler : unknown message format : ${e}`)
         }
-    }
+    }, [curFolder])
 
     useEffect(() => {
         if (!ws.isConnected) {
@@ -92,7 +97,7 @@ export function Sidebar({ clearLogs, setLogFilter }: SidebarProps): ReactElement
                 .catch(e => console.error(`ERROR fetchPlayground : ${e}`))
             return ws.addSubscriber(msgHandler)
         }
-    }, [ws.isConnected])
+    }, [ws.isConnected, msgHandler])
 
     return <Stack gap="md">
         <Group gap="xs" justify="flex-end">

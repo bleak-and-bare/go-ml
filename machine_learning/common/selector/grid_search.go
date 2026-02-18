@@ -11,6 +11,8 @@ import (
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/dataset"
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/iterable/accumulator"
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/maths/utils"
+	"github.com/bleak-and-bare/go-ml/message"
+	"github.com/google/uuid"
 	"golang.org/x/exp/constraints"
 )
 
@@ -107,7 +109,7 @@ func (g *GridSearch[T]) grid_search_worker(ctx context.Context, jobs <-chan grid
 	}
 }
 
-func (g *GridSearch[T]) Fit(ds *dataset.DataSet[T]) error {
+func (g *GridSearch[T]) Fit(ds *dataset.DataSet[T], headless bool) error {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
@@ -145,7 +147,14 @@ func (g *GridSearch[T]) Fit(ds *dataset.DataSet[T]) error {
 	var best_params map[string]float64
 
 	done := 0
-	fmt.Printf("\nGridSearch progress : %d/%d (%d/%d%%)", 0, len(combinations), 0, 100)
+	prog_id := uuid.New().String()
+
+	if headless {
+		fmt.Printf("\nGridSearch progress : %d/%d (%d/%d%%)", 0, len(combinations), 0, 100)
+	} else {
+		message.Progress(fmt.Sprintf("GridSearch progress %d/%d", 0, len(combinations)), prog_id, 0.0)
+	}
+
 	for range combinations {
 		r := <-results
 		done++
@@ -154,16 +163,23 @@ func (g *GridSearch[T]) Fit(ds *dataset.DataSet[T]) error {
 			return r.err
 		}
 
-		fmt.Printf("\r\033[KGridSearch progress : %d/%d (%d/%d%%)", done,
-			len(combinations),
-			int(math.Round(100.0*float64(done)/float64(len(combinations)))), 100)
+		if headless {
+			fmt.Printf("\r\033[KGridSearch progress : %d/%d (%d/%d%%)", done,
+				len(combinations),
+				int(math.Round(100.0*float64(done)/float64(len(combinations)))), 100)
+		} else {
+			message.Progress(
+				fmt.Sprintf("GridSearch progress %d/%d", done, len(combinations)),
+				prog_id,
+				float32(math.Round(100.0*float64(done)/float64(len(combinations)))),
+			)
+		}
 
 		if r.loss < T(best_loss) {
 			best_loss = float64(r.loss)
 			best_params = r.params
 		}
 	}
-	fmt.Println()
 
 	g.best_params = best_params
 

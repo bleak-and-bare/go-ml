@@ -2,14 +2,13 @@ import "@mantine/core/styles.css";
 import '@mantine/notifications/styles.css'
 import { AppShell, Burger, Title, Group, MantineProvider, ThemeIcon } from "@mantine/core";
 import { theme } from "./theme";
-import { WebSocketProvider } from "./WebSocketContext";
+import { WebSocketProvider } from "./context/WebSocketContext";
 import { useDisclosure } from "@mantine/hooks";
-import { Sidebar } from "./Sidebar";
+import { Sidebar, MainSection } from "./section";
 import { Notifications } from "@mantine/notifications";
-import Main from "./MainSection";
 import { useState } from "react";
-import { LogType } from "./LogType";
-import { IconRobot } from "@tabler/icons-react";
+import { LogType } from "./@types";
+import { IconChartCohort } from "@tabler/icons-react";
 
 export default function App() {
     const [opened, { toggle }] = useDisclosure()
@@ -17,7 +16,8 @@ export default function App() {
     const [logFilter, setLogFilter] = useState<Record<LogType, boolean>>({
         error: true,
         info: true,
-        table: true
+        table: true,
+        progress: true,
     })
 
     return <MantineProvider
@@ -35,7 +35,7 @@ export default function App() {
                 <AppShell.Header>
                     <Group h="100%" px="md" gap="xs">
                         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-                        <ThemeIcon variant="transparent" color="cyan"><IconRobot /></ThemeIcon>
+                        <ThemeIcon variant="transparent" color="cyan"><IconChartCohort /></ThemeIcon>
                         <Title order={3} c="cyan">Report</Title>
                     </Group>
                 </AppShell.Header>
@@ -43,7 +43,7 @@ export default function App() {
                     <Sidebar clearLogs={() => setClearLogs(c => !c)} setLogFilter={filter => setLogFilter(filter)} />
                 </AppShell.Navbar>
                 <AppShell.Main>
-                    <Main clearLogs={clearLogs} logFilter={logFilter} />
+                    <MainSection clearLogs={clearLogs} logFilter={logFilter} />
                 </AppShell.Main>
             </AppShell>
         </WebSocketProvider>

@@ -22,9 +22,17 @@ func Error(msg string, with_stack_frame bool) {
 	print_msg(NewError(msg, with_stack_frame))
 }
 
-func Table(table TableStruct) {
+func Table(caption string, head []string, body [][]string) {
 	print_msg(Message{
 		Type: TABLE,
-		Data: table,
+		Data: TableStruct{
+			Caption: caption,
+			Head:    head,
+			Body:    body,
+		},
 	})
+}
+
+func Progress(label string, id string, value float32) {
+	print_msg(NewProgress(label, id, value))
 }

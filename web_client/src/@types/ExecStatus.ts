@@ -4,4 +4,4 @@ enum ExecStatus {
     STOPPED
 }
 
-export default ExecStatus
+export { ExecStatus }

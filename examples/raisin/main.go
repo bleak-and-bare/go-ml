@@ -62,7 +62,7 @@ func main() {
 		}
 	}))
 
-	if err := gs.Fit(train); err != nil {
+	if err := gs.Fit(train, true); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to search hyper params : %v", err)
 		return
 	}

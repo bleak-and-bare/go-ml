@@ -317,20 +317,19 @@ func (ds *DataSet[T]) head(max uint32, caption string, headless bool) {
 		fmt.Println(caption)
 		p.Print(true)
 	} else {
-		table := message.TableStruct{
-			Caption: caption,
-		}
+		var head []string
+		var body [][]string
 
 		for _, h := range ds.headers {
 			if h.used {
-				table.Head = append(table.Head, h.name)
+				head = append(head, h.name)
 			}
 		}
 
 		max_bound := ds.max_bound()
 		for i := ds.min_bound(); i < max_bound && max > 0; i, max = i+1, max-1 {
 			k := 0
-			row := make([]string, len(table.Head))
+			row := make([]string, len(head))
 
 			for j, h := range ds.headers {
 				if !h.used {
@@ -348,10 +347,10 @@ func (ds *DataSet[T]) head(max uint32, caption string, headless bool) {
 				k++
 			}
 
-			table.Body = append(table.Body, row)
+			body = append(body, row)
 		}
 
-		message.Table(table)
+		message.Table(caption, head, body)
 	}
 }
 

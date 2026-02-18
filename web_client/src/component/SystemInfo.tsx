@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react"
-import ExecStatus from "./ExecStatus"
+import { ExecStatus, Message } from "../@types"
 import { Group, ThemeIcon, Transition, Text, Paper, Table } from "@mantine/core"
 import { IconBrain } from "@tabler/icons-react"
-import { useWebSocket } from "./WebSocketContext"
-import { Message } from "./Message"
-import { formatDuration } from "./util"
+import { useWebSocket } from "../context/WebSocketContext"
+import { formatDuration } from "../util"
 
 type Stats = Extract<Message, { type: "stats" }>["data"]
 type ExecStats = Extract<Message, { type: "exec_finished" }>["data"]

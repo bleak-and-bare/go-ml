@@ -1,6 +1,8 @@
 package message
 
-import "runtime"
+import (
+	"runtime"
+)
 
 type MessageType string
 
@@ -74,5 +76,16 @@ func NewExecFinished(stats ProcessStat) Message {
 	return Message{
 		Type: EXEC_FINISHED,
 		Data: stats,
+	}
+}
+
+func NewProgress(label string, id string, value float32) Message {
+	return Message{
+		Type: PROGRESS,
+		Data: ProgressStruct{
+			ID:    id,
+			Value: value,
+			Label: label,
+		},
 	}
 }

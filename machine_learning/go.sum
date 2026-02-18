@@ -1,2 +1,6 @@
+github.com/bleak-and-bare/go-ml/message v0.0.0 h1:AR0jg6hS8Py8Vsp6+1D4gdYeAObbDs8vJiC9nrWTrWQ=
+github.com/bleak-and-bare/go-ml/message v0.0.0/go.mod h1:MtGVG8uzW9IakqhS/FrYThuwimcXi9PpKAfaRNHA2NQ=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93 h1:fQsdNF2N+/YewlRZiricy4P1iimyPKZ/xwniHj8Q2a0=
 golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93/go.mod h1:EPRbTFwzwjXj9NpYyyrvenVh9Y+GFeEvMNh7Xuz7xgU=

@@ -11,7 +11,6 @@ import (
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/iterable/accumulator"
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/maths/regularization"
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/maths/utils"
-	"github.com/bleak-and-bare/go-ml/machine_learning/common/misc"
 	"github.com/bleak-and-bare/go-ml/machine_learning/common/selector"
 	"github.com/bleak-and-bare/go-ml/machine_learning/processing"
 	"github.com/bleak-and-bare/go-ml/machine_learning/regression/linear"
@@ -60,7 +59,7 @@ func main() {
 		}
 	}))
 
-	if err := gs.Fit(train); err != nil {
+	if err := gs.Fit(train, false); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to search hyper params : %v", err)
 		return
 	}
@@ -76,15 +75,15 @@ func main() {
 	t := test.CollectTargets()
 	r := m.PredictOn(test)
 
-	var gp misc.GridPrinter
-	gp.Columns("Min", "Max", "Mean")
-	gp.NewRow()
-	gp.Columns(
-		fmt.Sprintf("%.3f", slices.Min(r)),
-		fmt.Sprintf("%.3f", slices.Max(r)),
-		fmt.Sprintf("%.3f", accumulator.Mean(slices.Values(r))),
+	message.Table(
+		"Probability",
+		[]string{"Min", "Max", "Mean"},
+		[][]string{{
+			fmt.Sprintf("%.3f", slices.Min(r)),
+			fmt.Sprintf("%.3f", slices.Max(r)),
+			fmt.Sprintf("%.3f", accumulator.Mean(slices.Values(r))),
+		}},
 	)
-	gp.Print(true)
 
 	trg := make([]int, len(t))
 	pred := make([]int, len(r))
