@@ -148,7 +148,6 @@ export function Sidebar({ clearLogs, setLogFilter }: SidebarProps): ReactElement
                 for (const log in filter) filter[log as LogType] = logs.includes(log)
                 return { ...filter }
             })}
-            clearable
         />
         <Button leftSection={<IconTrash size={16} />} variant="light" onClick={clearLogs}>Clear all logs</Button>
     </Stack>

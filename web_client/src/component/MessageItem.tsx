@@ -1,11 +1,12 @@
 import { Divider, Box, Text, alpha, Table, Progress, Group } from "@mantine/core"
 import { Message } from "../@types"
 import Markdown from "react-markdown"
+import { markdownComponents } from "./markdownComponents"
 
 export default function MessageItem({ message }: { message: Message }) {
     switch (message.type) {
         case "info":
-            return <Markdown>{message.data}</Markdown>
+            return <Markdown components={markdownComponents}>{message.data}</Markdown>
 
         case "error":
             return message.data.error.length === 0 ? <></> : <>
@@ -32,7 +33,9 @@ export default function MessageItem({ message }: { message: Message }) {
 
         case "progress":
             return <Group>
-                <Text>{message.data.label}</Text>
+                <Markdown components={markdownComponents}>
+                    {message.data.label}
+                </Markdown>
                 <Progress
                     flex={1}
                     color="indigo"
@@ -43,9 +46,6 @@ export default function MessageItem({ message }: { message: Message }) {
                     animated={message.data.value < 100}
                 />
             </Group>
-
-        case "exec_finished":
-            return <Divider variant="dotted" my="sm" />
     }
 
     return <></>

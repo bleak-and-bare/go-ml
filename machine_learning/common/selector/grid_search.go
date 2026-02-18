@@ -113,7 +113,7 @@ func (g *GridSearch[T]) Fit(ds *dataset.DataSet[T], headless bool) error {
 	start := time.Now()
 	defer func() {
 		elapsed := time.Since(start)
-		fmt.Printf("GridSearch cross-validation took %v\n", elapsed)
+		fmt.Printf("__GridSearch__ cross-validation took %v\n", elapsed)
 	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -152,7 +152,7 @@ func (g *GridSearch[T]) Fit(ds *dataset.DataSet[T], headless bool) error {
 	if headless {
 		fmt.Printf("\nGridSearch progress : %d/%d (%d/%d%%)", 0, len(combinations), 0, 100)
 	} else {
-		message.Progress(fmt.Sprintf("GridSearch progress %d/%d", 0, len(combinations)), prog_id, 0.0)
+		message.Progress(fmt.Sprintf("__GridSearch__ progress %d/%d", 0, len(combinations)), prog_id, 0.0)
 	}
 
 	for range combinations {
