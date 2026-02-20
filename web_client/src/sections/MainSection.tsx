@@ -1,6 +1,6 @@
 import { Tabs, Text } from "@mantine/core";
 import { LogType } from "../@types"
-import Execution from "../component/Execution";
+import Execution from "../components/Execution";
 import { IconCode, IconCpu, IconTerminal } from "@tabler/icons-react";
 
 type MainProps = {
@@ -15,7 +15,12 @@ enum Tab {
 }
 
 export default function MainSection({ logFilter, clearLogs }: MainProps) {
-    return <Tabs variant="outline" radius="xs" defaultValue={Tab.Execution}>
+    return <Tabs
+        variant="outline"
+        radius="xs"
+        pl={{ base: 0, md: "xl" }}
+        defaultValue={Tab.Execution}
+    >
         <Tabs.List>
             <Tabs.Tab value={Tab.Execution} leftSection={<IconCpu size={16} />}>
                 Execution
@@ -28,7 +33,7 @@ export default function MainSection({ logFilter, clearLogs }: MainProps) {
             </Tabs.Tab>
         </Tabs.List>
 
-        <Tabs.Panel pt="sm" pl="xs" value={Tab.Execution}>
+        <Tabs.Panel pt="sm" value={Tab.Execution}>
             <Execution logFilter={logFilter} clearLogs={clearLogs} />
         </Tabs.Panel>
 

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Box, Button, Divider, HoverCard, Stack, Text } from "@mantine/core"
+import { Divider, Stack, Text } from "@mantine/core"
 import { Message, AllLogType, LogType } from "../@types"
-import { useWebSocket } from "../context/WebSocketContext"
-import { MessageItem } from "../component";
-import { IconCode, IconPlus, IconSquareX, IconTrash } from "@tabler/icons-react";
+import { useWebSocket } from "../contexts/WebSocketContext"
+import SortableRow from "./SortableRow";
+import { DragDropProvider } from "@dnd-kit/react";
 
 export default function Execution({ logFilter, clearLogs }: {
     logFilter: Record<LogType, boolean>,
@@ -72,43 +72,24 @@ export default function Execution({ logFilter, clearLogs }: {
         }
     }, [ws.isConnected])
 
-    return <Stack gap="xs">
-        {messagesToShow.length === 0
-            ? <Text style={{ textAlign: "center" }}>Consider checking log filter or Run a program.</Text>
-            : messagesToShow.map((msg, i) => msg.type === "exec_finished" ? <Divider key={i} variant="dotted" my="sm" />
-                : <HoverCard key={i}>
-                    <HoverCard.Target>
-                        <Box>
-                            <MessageItem message={msg} />
-                        </Box>
-                    </HoverCard.Target>
-
-                    <HoverCard.Dropdown p="0">
-                        <Button.Group>
-                            <Button
-                                size="xs"
-                                variant="light"
-                                id="test"
-                                leftSection={<IconPlus size="14" />}>Text</Button>
-                            <Button
-                                size="xs"
-                                variant="light"
-                                disabled
-                                leftSection={<IconCode size="14" />}>Code</Button>
-                            <Button
-                                onClick={() => setMessages(messages => messages.filter((_, k) => i !== k))}
-                                size="xs"
-                                variant="light"
-                                leftSection={<IconTrash size="14" />}>Delete</Button>
-                            <Button
-                                onClick={() => setMessages(messages => messages.filter((_, k) => k > i))}
-                                size="xs"
-                                variant="light"
-                                leftSection={<IconSquareX size="14" />}>Clear</Button>
-                        </Button.Group>
-                    </HoverCard.Dropdown>
-                </HoverCard>)}
-        <div ref={bottomRef} id="bottom-sentinel" />
-    </Stack>
+    return <DragDropProvider onDragEnd={(_event) => {
+        // console.log({ index: event.operation.source.initialIndex })
+        // setMessages(messages => (move(messages, event) as unknown as Message[]))
+    }}>
+        <Stack gap="xs">
+            {messagesToShow.length === 0
+                ? <Text style={{ textAlign: "center" }}>Consider checking log filter or Run a program.</Text>
+                : messagesToShow.map((msg, i) => msg.type === "exec_finished"
+                    ? <Divider key={i} variant="dotted" my="sm" />
+                    : <SortableRow
+                        index={i}
+                        onClear={() => setMessages(messages => messages.filter((_, k) => k > i))}
+                        onDelete={() => setMessages(messages => messages.filter((_, k) => k !== i))}
+                        onAddText={() => { }}
+                        key={i} message={msg}
+                    />
+                )}
+            <div ref={bottomRef} id="bottom-sentinel" />
+        </Stack>
+    </DragDropProvider>
 }
-

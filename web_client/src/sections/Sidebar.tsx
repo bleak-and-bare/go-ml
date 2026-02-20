@@ -1,10 +1,10 @@
 import { ActionIcon, Button, Divider, Group, Loader, MultiSelect, Select, Stack, Text, ThemeIcon, Title } from "@mantine/core"
 import { IconLink, IconPlayerPause, IconPlayerPlay, IconRotateClockwise, IconTrash, IconUnlink, IconX } from "@tabler/icons-react"
 import { useState, useEffect, type ReactElement, Dispatch, SetStateAction, useCallback } from "react"
-import { useWebSocket } from "../context/WebSocketContext"
+import { useWebSocket } from "../contexts/WebSocketContext"
 import { ExecStatus, Message, AllLogType, LogType } from "../@types/"
 import { notifications } from "@mantine/notifications"
-import { SystemInfo } from "../component"
+import { SystemInfo } from "../components"
 
 type SidebarProps = {
     clearLogs: () => void,

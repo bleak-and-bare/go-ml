@@ -2,9 +2,9 @@ import "@mantine/core/styles.css";
 import '@mantine/notifications/styles.css'
 import { AppShell, Burger, Title, Group, MantineProvider, ThemeIcon } from "@mantine/core";
 import { theme } from "./theme";
-import { WebSocketProvider } from "./context/WebSocketContext";
+import { WebSocketProvider } from "./contexts/WebSocketContext";
 import { useDisclosure } from "@mantine/hooks";
-import { Sidebar, MainSection } from "./section";
+import { Sidebar, MainSection } from "./sections";
 import { Notifications } from "@mantine/notifications";
 import { useState } from "react";
 import { LogType } from "./@types";

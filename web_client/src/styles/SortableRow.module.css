@@ -1,0 +1,30 @@
+.sortable-row {
+    gap: var(--mantine-spacing-xs);
+    align-items: flex-start;
+    position: relative;
+
+    &:hover>* {
+        opacity: 1;
+    }
+
+    &-buttons {
+        opacity: 0;
+        position: absolute;
+        flex-wrap: nowrap;
+        gap: 0;
+        right: 100%;
+        display: none;
+        top: 0;
+        z-index: 100;
+        will-change: opacity;
+        transition: opacity ease 200ms;
+
+        @media (min-width: $mantine-breakpoint-sm) {
+            display: flex;
+        }
+
+        &[data-menu-opened=true] {
+            opacity: 1;
+        }
+    }
+}

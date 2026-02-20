@@ -27,7 +27,7 @@ export default function MessageItem({ message }: { message: Message }) {
             </>
 
         case "table":
-            return <Table.ScrollContainer minWidth={360}>
+            return <Table.ScrollContainer minWidth={480} maxHeight={512}>
                 <Table data={message.data} />
             </Table.ScrollContainer>
 

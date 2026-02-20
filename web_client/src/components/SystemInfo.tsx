@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactElement } from "react"
 import { ExecStatus, Message } from "../@types"
 import { Group, ThemeIcon, Transition, Text, Paper, Table } from "@mantine/core"
 import { IconBrain } from "@tabler/icons-react"
-import { useWebSocket } from "../context/WebSocketContext"
+import { useWebSocket } from "../contexts/WebSocketContext"
 import { formatDuration } from "../util"
 
 type Stats = Extract<Message, { type: "stats" }>["data"]
