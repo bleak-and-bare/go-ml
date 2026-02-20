@@ -1,10 +1,11 @@
-import { Box, Menu, Group, ActionIcon } from "@mantine/core"
+import { Box, Menu, Group, ActionIcon, Button } from "@mantine/core"
 import { IconPlus, IconGripVertical, IconTextSize, IconCode, IconTrash, IconSquareX } from "@tabler/icons-react"
 import { Message } from "../@types"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import MessageItem from "./MessageItem"
 import { useSortable } from "@dnd-kit/react/sortable"
 import classes from "../styles/SortableRow.module.css"
+import { theme } from "../theme"
 
 type SortableRowProps = {
     message: Message,
@@ -16,9 +17,24 @@ type SortableRowProps = {
 }
 
 function SortableRow({ message, index, onClear, onDelete, onAddText, onAddCode }: SortableRowProps) {
-    const handleRef = useRef<HTMLButtonElement>(null)
-    const { ref } = useSortable({ index, handle: handleRef, id: index })
+    const defaultHandleRef = useRef<HTMLButtonElement>(null)
+    const largeHandleRef = useRef<HTMLButtonElement>(null)
+    const { ref, handleRef } = useSortable({ index, id: index })
     const [menuOpened, setMenuOpened] = useState(false)
+
+    useEffect(() => {
+        const mq = window.matchMedia(`(min-width: ${theme.breakpoints!.sm})`)
+        const updateRef = () => {
+            handleRef(mq.matches
+                ? largeHandleRef.current
+                : defaultHandleRef.current)
+        }
+
+        updateRef()
+        mq.addEventListener('change', updateRef)
+
+        return () => mq.removeEventListener('change', updateRef)
+    }, [])
 
     return <Group className={classes["sortable-row"]} ref={ref}>
         <Menu
@@ -27,7 +43,7 @@ function SortableRow({ message, index, onClear, onDelete, onAddText, onAddCode }
             onChange={setMenuOpened}
             withArrow
         >
-            <Group className={classes["sortable-row-buttons"]} data-menu-opened={menuOpened}>
+            <Group className={classes["sortable-row-side-buttons"]} data-menu-opened={menuOpened}>
                 <Menu.Target>
                     <ActionIcon
                         size="sm"
@@ -37,7 +53,7 @@ function SortableRow({ message, index, onClear, onDelete, onAddText, onAddCode }
                     </ActionIcon>
                 </Menu.Target>
                 <ActionIcon
-                    ref={handleRef}
+                    ref={largeHandleRef}
                     size="sm"
                     variant="subtle"
                     style={{ cursor: "grab" }}
@@ -53,6 +69,31 @@ function SortableRow({ message, index, onClear, onDelete, onAddText, onAddCode }
                 {index > 0 && <Menu.Item fz="xs" onClick={onClear} leftSection={<IconSquareX size={14} />}>Clear</Menu.Item>}
             </Menu.Dropdown>
         </Menu>
+
+        <Group gap="xs" className={classes["sortable-row-center-buttons"]}>
+            <ActionIcon
+                variant="default"
+                ref={defaultHandleRef}
+                style={{ cursor: "grab" }}
+            >
+                <IconGripVertical size={14} />
+            </ActionIcon>
+            <Button.Group>
+                <Button variant="default" size="sm" px="xs">
+                    <IconTextSize size={14} />
+                </Button>
+                <Button variant="default" disabled size="sm" px="xs">
+                    <IconCode size={14} />
+                </Button>
+                <Button variant="default" size="sm" px="xs">
+                    <IconTrash size={14} />
+                </Button>
+                {index > 0 && <Button variant="default" size="sm" px="xs">
+                    <IconSquareX size={14} />
+                </Button>}
+            </Button.Group>
+        </Group>
+
         <Box flex={1} miw={0} style={{ cursor: "default" }}>
             <MessageItem message={message} />
         </Box>

@@ -43,26 +43,32 @@ func ReadMemStat(pid int) (MemStat, error) {
 
 		if len(cols) > 1 {
 			fields := strings.Fields(cols[1])
-			value, err := parse_kb(fields[0])
+			if len(fields) > 0 {
+				value, err := parse_kb(fields[0])
 
-			if strings.EqualFold(cols[0], "VmRSS") {
-				if err != nil {
-					return MemStat{}, nil
+				if strings.EqualFold(cols[0], "VmRSS") {
+					if err != nil {
+						return MemStat{}, nil
+					}
+
+					m.RSS = value
+					rss_found = true
 				}
 
-				m.RSS = value
-				rss_found = true
-			}
+				if strings.EqualFold(cols[0], "VmHWM") {
+					if err != nil {
+						return MemStat{}, nil
+					}
 
-			if strings.EqualFold(cols[0], "VmHWM") {
-				if err != nil {
-					return MemStat{}, nil
+					m.PeakRSS = value
+					peak_rss_found = true
 				}
-
-				m.PeakRSS = value
-				peak_rss_found = true
 			}
 		}
+	}
+
+	if !peak_rss_found || !rss_found {
+		return MemStat{}, fmt.Errorf("ReadMemStat : no valid memory info found")
 	}
 
 	return m, nil

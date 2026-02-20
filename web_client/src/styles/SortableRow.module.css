@@ -7,7 +7,22 @@
         opacity: 1;
     }
 
-    &-buttons {
+    &-center-buttons {
+        opacity: 0;
+        position: absolute;
+        top: calc(100% - 4px);
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        z-index: 100;
+        flex-wrap: nowrap;
+
+        @media (min-width: $mantine-breakpoint-sm) {
+            display: none;
+        }
+    }
+
+    &-side-buttons {
         opacity: 0;
         position: absolute;
         flex-wrap: nowrap;
