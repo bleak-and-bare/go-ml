@@ -1,8 +1,9 @@
 import "@mantine/core/styles.css";
 import '@mantine/notifications/styles.css'
+import '@mantine/code-highlight/styles.css'
 import { AppShell, Burger, Title, Group, MantineProvider, ThemeIcon } from "@mantine/core";
 import { theme } from "./theme";
-import { WebSocketProvider } from "./contexts/WebSocketContext";
+import { WebSocketProvider, GoCodeHighlightProvider } from "./contexts";
 import { useDisclosure } from "@mantine/hooks";
 import { Sidebar, MainSection } from "./sections";
 import { Notifications } from "@mantine/notifications";
@@ -43,7 +44,9 @@ export default function App() {
                     <Sidebar clearLogs={() => setClearLogs(c => !c)} setLogFilter={filter => setLogFilter(filter)} />
                 </AppShell.Navbar>
                 <AppShell.Main>
-                    <MainSection clearLogs={clearLogs} logFilter={logFilter} />
+                    <GoCodeHighlightProvider>
+                        <MainSection clearLogs={clearLogs} logFilter={logFilter} />
+                    </GoCodeHighlightProvider>
                 </AppShell.Main>
             </AppShell>
         </WebSocketProvider>
