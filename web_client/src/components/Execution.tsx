@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ActionIcon, Divider, Stack, Text } from "@mantine/core"
+import { ActionIcon, Stack, Text } from "@mantine/core"
 import { Message, AllLogType, LogType } from "../@types"
 import { useWebSocket } from "../contexts/WebSocketContext"
 import SortableRow from "./SortableRow";
@@ -14,11 +14,12 @@ export default function Execution({ logFilter, clearLogs }: {
 }) {
     const ws = useWebSocket()
     const bottomRef = useRef<HTMLDivElement | null>(null)
-    const [messages, setMessages] = useState<Message[]>([])
+    const [messages, setMessages] = useState<(Message & { id: number })[]>([])
     const [displayScrollBtn, setDisplayScrollBtn] = useState(false)
     const messagesToShow = useMemo(() => messages
         .filter(msg => logFilter[msg.type as LogType] || msg.type === "exec_finished"), // using type="exec_finished" to define an execution delimiter
         [messages, logFilter])
+    console.log({ messagesToShow })
 
     useEffect(() => {
         const shouldDisplay = shouldDisplayArrowUp()
@@ -56,18 +57,25 @@ export default function Execution({ logFilter, clearLogs }: {
                     messages = messages.map(prev => {
                         if (prev.type === "progress" && prev.data.id === msg.data.id) {
                             update = true
-                            return msg
+                            return {
+                                id: generateId(),
+                                ...msg
+                            }
                         }
                         return prev
                     })
 
-                    return update ? messages : [...messages, msg]
+                    return update ? messages : [...messages, { id: generateId(), ...msg }]
                 })
             } else if (msg.type === "exec_finished"
                 || AllLogType.includes(msg.type as LogType))
-                setMessages(messages => [...messages, msg])
+                setMessages(messages => [...messages, { id: generateId(), ...msg }])
         } catch (e) {
-            setMessages(messages => [...messages, { type: "error", data: { error: `${e}` } }])
+            setMessages(messages => [...messages, {
+                id: generateId(),
+                type: "error",
+                data: { error: `${e}` }
+            }])
             // console.error(`Main.msgHandler : ${e}`)
         }
     }
@@ -91,22 +99,36 @@ export default function Execution({ logFilter, clearLogs }: {
     }
 
     return <>
-        <DragDropProvider onDragEnd={(_event) => {
+        <DragDropProvider onDragEnd={(event) => {
+            // console.log({ event })
+            console.log({
+                source: event.operation.source?.id,
+                target: event.operation.target?.id
+            })
+            return
+            setMessages(messages => {
+                // console.log({
+                //     source: event.operation.source?.id,
+                //     target: event.operation.target?.id
+                // })
+                // return move(messages, event)
+                return messages
+            })
+
             // console.log({ index: event.operation.source.initialIndex })
             // setMessages(messages => (move(messages, event) as unknown as Message[]))
         }}>
             <Stack gap="xs">
                 {messagesToShow.length === 0
                     ? <Text style={{ textAlign: "center" }}>Consider checking log filter or Run a program.</Text>
-                    : messagesToShow.map((msg, i) => msg.type === "exec_finished"
-                        ? <Divider key={i} variant="dotted" my="sm" />
-                        : <SortableRow
-                            index={i}
-                            onClear={() => setMessages(messages => messages.filter((_, k) => k > i))}
-                            onDelete={() => setMessages(messages => messages.filter((_, k) => k !== i))}
-                            onAddText={() => { }}
-                            key={i} message={msg}
-                        />
+                    : messagesToShow.map((msg, i) => <SortableRow
+                        id={msg.id}
+                        index={i}
+                        onClear={() => setMessages(messages => messages.filter((_, k) => k > i))}
+                        onDelete={() => setMessages(messages => messages.filter((_, k) => k !== i))}
+                        onAddText={() => { }}
+                        key={i} message={msg}
+                    />
                     )}
                 <div className={classes["scroll-up-btn"]} data-show={displayScrollBtn}>
                     <ActionIcon
@@ -131,4 +153,8 @@ export default function Execution({ logFilter, clearLogs }: {
             <IconTrash size={24} />
         </ActionIcon>}
     </>
+}
+
+function generateId(): number {
+    return Math.round(1000 * Math.random())
 }

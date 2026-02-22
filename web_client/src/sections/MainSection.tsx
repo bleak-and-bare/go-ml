@@ -11,7 +11,7 @@ type MainProps = {
 enum Tab {
     Execution = "execution",
     Code = "code",
-    REPL = "repl"
+    Playground = "playground"
 }
 
 export default function MainSection({ logFilter, clearLogs }: MainProps) {
@@ -28,8 +28,8 @@ export default function MainSection({ logFilter, clearLogs }: MainProps) {
             <Tabs.Tab value={Tab.Code} leftSection={<IconCode size={16} />}>
                 Code
             </Tabs.Tab>
-            <Tabs.Tab value={Tab.REPL} leftSection={<IconTerminal size={16} />}>
-                REPL
+            <Tabs.Tab value={Tab.Playground} leftSection={<IconTerminal size={16} />}>
+                Playground
             </Tabs.Tab>
         </Tabs.List>
 
@@ -41,8 +41,8 @@ export default function MainSection({ logFilter, clearLogs }: MainProps) {
             <Text>Here goes the code</Text>
         </Tabs.Panel>
 
-        <Tabs.Panel pt="sm" pl="xs" value={Tab.REPL}>
-            <Text>Here goes the Go interpreter</Text>
+        <Tabs.Panel pt="sm" pl="xs" value={Tab.Playground}>
+            <Text>Here goes the playground</Text>
         </Tabs.Panel>
     </Tabs>
 }
