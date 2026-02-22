@@ -47,7 +47,8 @@ type Message = {
         label: string,
         value: number,
         id: string
-    }
+    },
+    running?: boolean
 }
 
 type MessageType = Message["type"]

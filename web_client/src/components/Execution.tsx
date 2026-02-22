@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ActionIcon, Stack, Text } from "@mantine/core"
+import { ActionIcon, Divider, Stack, Text } from "@mantine/core"
 import { Message, AllLogType, LogType } from "../@types"
 import { useWebSocket } from "../contexts/WebSocketContext"
-import SortableRow from "./SortableRow";
-import { DragDropProvider } from "@dnd-kit/react";
 import { IconArrowNarrowUp, IconTrash } from "@tabler/icons-react";
 import appClasses from "../styles/App.module.css"
 import classes from "../styles/Execution.module.css"
+import MessageItem from "./MessageItem";
 
 export default function Execution({ logFilter, clearLogs }: {
     logFilter: Record<LogType, boolean>,
@@ -14,12 +13,11 @@ export default function Execution({ logFilter, clearLogs }: {
 }) {
     const ws = useWebSocket()
     const bottomRef = useRef<HTMLDivElement | null>(null)
-    const [messages, setMessages] = useState<(Message & { id: number })[]>([])
+    const [messages, setMessages] = useState<Message[]>([])
     const [displayScrollBtn, setDisplayScrollBtn] = useState(false)
     const messagesToShow = useMemo(() => messages
         .filter(msg => logFilter[msg.type as LogType] || msg.type === "exec_finished"), // using type="exec_finished" to define an execution delimiter
         [messages, logFilter])
-    console.log({ messagesToShow })
 
     useEffect(() => {
         const shouldDisplay = shouldDisplayArrowUp()
@@ -52,30 +50,38 @@ export default function Execution({ logFilter, clearLogs }: {
         try {
             const msg: Message = JSON.parse(data)
             if (msg.type === "progress") {
+                msg.running = true
                 setMessages(messages => {
                     let update = false
                     messages = messages.map(prev => {
                         if (prev.type === "progress" && prev.data.id === msg.data.id) {
                             update = true
-                            return {
-                                id: generateId(),
-                                ...msg
-                            }
+                            return msg
                         }
                         return prev
                     })
 
-                    return update ? messages : [...messages, { id: generateId(), ...msg }]
+                    return update ? messages : [...messages, msg]
                 })
             } else if (msg.type === "exec_finished"
-                || AllLogType.includes(msg.type as LogType))
-                setMessages(messages => [...messages, { id: generateId(), ...msg }])
+                || AllLogType.includes(msg.type as LogType)) {
+                setMessages(messages => {
+                    if (msg.type === "exec_finished")
+                        messages = messages.map(msg => {
+                            if (msg.type === "progress")
+                                return {
+                                    ...msg,
+                                    running: false
+                                }
+
+                            return msg
+                        })
+
+                    return [...messages, msg]
+                })
+            }
         } catch (e) {
-            setMessages(messages => [...messages, {
-                id: generateId(),
-                type: "error",
-                data: { error: `${e}` }
-            }])
+            setMessages(messages => [...messages, { type: "error", data: { error: `${e}` } }])
             // console.error(`Main.msgHandler : ${e}`)
         }
     }
@@ -99,50 +105,25 @@ export default function Execution({ logFilter, clearLogs }: {
     }
 
     return <>
-        <DragDropProvider onDragEnd={(event) => {
-            // console.log({ event })
-            console.log({
-                source: event.operation.source?.id,
-                target: event.operation.target?.id
-            })
-            return
-            setMessages(messages => {
-                // console.log({
-                //     source: event.operation.source?.id,
-                //     target: event.operation.target?.id
-                // })
-                // return move(messages, event)
-                return messages
-            })
-
-            // console.log({ index: event.operation.source.initialIndex })
-            // setMessages(messages => (move(messages, event) as unknown as Message[]))
-        }}>
-            <Stack gap="xs">
-                {messagesToShow.length === 0
-                    ? <Text style={{ textAlign: "center" }}>Consider checking log filter or Run a program.</Text>
-                    : messagesToShow.map((msg, i) => <SortableRow
-                        id={msg.id}
-                        index={i}
-                        onClear={() => setMessages(messages => messages.filter((_, k) => k > i))}
-                        onDelete={() => setMessages(messages => messages.filter((_, k) => k !== i))}
-                        onAddText={() => { }}
-                        key={i} message={msg}
-                    />
-                    )}
-                <div className={classes["scroll-up-btn"]} data-show={displayScrollBtn}>
-                    <ActionIcon
-                        onClick={scrollUp}
-                        variant="light"
-                        radius="lg"
-                        size="lg"
-                    >
-                        <IconArrowNarrowUp size={24} />
-                    </ActionIcon>
-                </div>
-                <div ref={bottomRef} id="bottom-sentinel" />
-            </Stack>
-        </DragDropProvider>
+        <Stack gap="xs">
+            {messagesToShow.length === 0
+                ? <Text style={{ textAlign: "center" }}>Consider checking log filter or Run a program.</Text>
+                : messagesToShow.map((msg, i) => msg.type === "exec_finished"
+                    ? <Divider key={i} variant="dotted" my="sm" />
+                    : <MessageItem key={i} message={msg} />
+                )}
+            <div className={classes["scroll-up-btn"]} data-show={displayScrollBtn}>
+                <ActionIcon
+                    onClick={scrollUp}
+                    variant="light"
+                    radius="lg"
+                    size="lg"
+                >
+                    <IconArrowNarrowUp size={24} />
+                </ActionIcon>
+            </div>
+            <div ref={bottomRef} id="bottom-sentinel" />
+        </Stack>
         {messages.length > 0 && <ActionIcon
             onClick={() => setMessages([])}
             variant="light"
@@ -153,8 +134,4 @@ export default function Execution({ logFilter, clearLogs }: {
             <IconTrash size={24} />
         </ActionIcon>}
     </>
-}
-
-function generateId(): number {
-    return Math.round(1000 * Math.random())
 }
