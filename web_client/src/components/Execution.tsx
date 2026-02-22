@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Divider, Stack, Text } from "@mantine/core"
+import { ActionIcon, Divider, Stack, Text } from "@mantine/core"
 import { Message, AllLogType, LogType } from "../@types"
 import { useWebSocket } from "../contexts/WebSocketContext"
 import SortableRow from "./SortableRow";
 import { DragDropProvider } from "@dnd-kit/react";
+import { IconArrowNarrowUp, IconTrash } from "@tabler/icons-react";
+import appClasses from "../styles/App.module.css"
+import classes from "../styles/Execution.module.css"
 
 export default function Execution({ logFilter, clearLogs }: {
     logFilter: Record<LogType, boolean>,
@@ -12,11 +15,14 @@ export default function Execution({ logFilter, clearLogs }: {
     const ws = useWebSocket()
     const bottomRef = useRef<HTMLDivElement | null>(null)
     const [messages, setMessages] = useState<Message[]>([])
+    const [displayScrollBtn, setDisplayScrollBtn] = useState(false)
     const messagesToShow = useMemo(() => messages
         .filter(msg => logFilter[msg.type as LogType] || msg.type === "exec_finished"), // using type="exec_finished" to define an execution delimiter
         [messages, logFilter])
 
     useEffect(() => {
+        const shouldDisplay = shouldDisplayArrowUp()
+        setDisplayScrollBtn(shouldDisplay)
         bottomRef.current?.scrollIntoView({ behavior: "smooth" })
 
         if (messages.length === 1 && messages[0].type === "exec_finished") {
@@ -72,24 +78,57 @@ export default function Execution({ logFilter, clearLogs }: {
         }
     }, [ws.isConnected])
 
-    return <DragDropProvider onDragEnd={(_event) => {
-        // console.log({ index: event.operation.source.initialIndex })
-        // setMessages(messages => (move(messages, event) as unknown as Message[]))
-    }}>
-        <Stack gap="xs">
-            {messagesToShow.length === 0
-                ? <Text style={{ textAlign: "center" }}>Consider checking log filter or Run a program.</Text>
-                : messagesToShow.map((msg, i) => msg.type === "exec_finished"
-                    ? <Divider key={i} variant="dotted" my="sm" />
-                    : <SortableRow
-                        index={i}
-                        onClear={() => setMessages(messages => messages.filter((_, k) => k > i))}
-                        onDelete={() => setMessages(messages => messages.filter((_, k) => k !== i))}
-                        onAddText={() => { }}
-                        key={i} message={msg}
-                    />
-                )}
-            <div ref={bottomRef} id="bottom-sentinel" />
-        </Stack>
-    </DragDropProvider>
+    const appClass = `.${appClasses.app}`
+
+    const shouldDisplayArrowUp = () => {
+        const appContainer = document.querySelector(appClass) as HTMLDivElement
+        return appContainer !== null && appContainer.clientHeight < appContainer.scrollHeight
+    }
+
+    const scrollUp = () => {
+        const appContainer = document.querySelector(appClass)
+        appContainer?.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    return <>
+        <DragDropProvider onDragEnd={(_event) => {
+            // console.log({ index: event.operation.source.initialIndex })
+            // setMessages(messages => (move(messages, event) as unknown as Message[]))
+        }}>
+            <Stack gap="xs">
+                {messagesToShow.length === 0
+                    ? <Text style={{ textAlign: "center" }}>Consider checking log filter or Run a program.</Text>
+                    : messagesToShow.map((msg, i) => msg.type === "exec_finished"
+                        ? <Divider key={i} variant="dotted" my="sm" />
+                        : <SortableRow
+                            index={i}
+                            onClear={() => setMessages(messages => messages.filter((_, k) => k > i))}
+                            onDelete={() => setMessages(messages => messages.filter((_, k) => k !== i))}
+                            onAddText={() => { }}
+                            key={i} message={msg}
+                        />
+                    )}
+                <div className={classes["scroll-up-btn"]} data-show={displayScrollBtn}>
+                    <ActionIcon
+                        onClick={scrollUp}
+                        variant="light"
+                        radius="lg"
+                        size="lg"
+                    >
+                        <IconArrowNarrowUp size={24} />
+                    </ActionIcon>
+                </div>
+                <div ref={bottomRef} id="bottom-sentinel" />
+            </Stack>
+        </DragDropProvider>
+        {messages.length > 0 && <ActionIcon
+            onClick={() => setMessages([])}
+            variant="light"
+            radius="lg"
+            size="lg"
+            className={classes['clear-btn']}
+        >
+            <IconTrash size={24} />
+        </ActionIcon>}
+    </>
 }

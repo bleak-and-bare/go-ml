@@ -1,0 +1,37 @@
+.clear-btn {
+    position: absolute;
+    z-index: 100;
+    right: 1rem;
+    bottom: 1rem;
+    opacity: 0.5;
+    transition: opacity ease 200ms;
+
+    &:hover {
+        opacity: 1;
+    }
+
+    @media (min-width: $mantine-breakpoint-md) {
+        display: none;
+    }
+}
+
+.scroll-up-btn {
+    display: none;
+    transform: translateY(-50%);
+    animation: fade 1.5s ease-in-out infinite alternate;
+
+    &[data-show=true] {
+        display: flex;
+        justify-content: center;
+    }
+}
+
+@keyframes fade {
+    from {
+        opacity: 0.4;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

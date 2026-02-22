@@ -79,16 +79,36 @@ function SortableRow({ message, index, onClear, onDelete, onAddText, onAddCode }
                 <IconGripVertical size={14} />
             </ActionIcon>
             <Button.Group>
-                <Button variant="default" size="sm" px="xs">
+                <Button
+                    onClick={onAddText}
+                    variant="default"
+                    size="sm"
+                    px="xs"
+                >
                     <IconTextSize size={14} />
                 </Button>
-                <Button variant="default" disabled size="sm" px="xs">
+                <Button
+                    onClick={onAddCode}
+                    variant="default"
+                    disabled
+                    size="sm"
+                    px="xs"
+                >
                     <IconCode size={14} />
                 </Button>
-                <Button variant="default" size="sm" px="xs">
+                <Button
+                    onClick={onDelete}
+                    variant="default"
+                    size="sm"
+                    px="xs"
+                >
                     <IconTrash size={14} />
                 </Button>
-                {index > 0 && <Button variant="default" size="sm" px="xs">
+                {index > 0 && <Button
+                    onClick={onClear}
+                    variant="default"
+                    size="sm"
+                    px="xs">
                     <IconSquareX size={14} />
                 </Button>}
             </Button.Group>
